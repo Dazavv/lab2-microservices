@@ -20,6 +20,42 @@
           </set>
         </option>
       </GradleProjectSettings>
+      <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$/event-service" />
+        <option name="gradleJvm" value="graalvm-jdk-21" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/event-service" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+      <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$/gateway-service" />
+        <option name="gradleJvm" value="graalvm-jdk-21" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/gateway-service" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+      <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$/group-event-service" />
+        <option name="gradleJvm" value="graalvm-jdk-21" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/group-event-service" />
+          </set>
+        </option>
+      </GradleProjectSettings>
+      <GradleProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$/user-service" />
+        <option name="gradleJvm" value="graalvm-jdk-21" />
+        <option name="modules">
+          <set>
+            <option value="$PROJECT_DIR$/user-service" />
+          </set>
+        </option>
+      </GradleProjectSettings>
     </option>
   </component>
 </project>
