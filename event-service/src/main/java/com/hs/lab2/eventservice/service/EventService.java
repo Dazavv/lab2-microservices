@@ -1,10 +1,12 @@
 package com.hs.lab2.eventservice.service;
 
 import com.hs.lab2.eventservice.client.UserClient;
+import com.hs.lab2.eventservice.dto.responses.UserDto;
 import com.hs.lab2.eventservice.entity.Event;
 import com.hs.lab2.eventservice.exceptions.EventConflictException;
 import com.hs.lab2.eventservice.exceptions.EventNotFoundException;
 import com.hs.lab2.eventservice.repository.EventRepository;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -23,11 +25,12 @@ public class EventService {
         return eventRepository.findAll();
     }
 
+    @CircuitBreaker(name = "eventService", fallbackMethod = "userFallback")
     public Mono<Event> addEvent(String name, String description, LocalDate date, LocalTime startTime, LocalTime endTime, Long ownerId) {
         if (endTime.isBefore(startTime) || date.isBefore(LocalDate.now())) {
             return Mono.error(new IllegalArgumentException("Invalid event time"));
-
         }
+
         return userClient.getUserById(ownerId)
                 .switchIfEmpty(Mono.error(new IllegalArgumentException("User not found")))
                 .flatMap(user ->
@@ -56,5 +59,9 @@ public class EventService {
         return eventRepository.findById(id)
                 .switchIfEmpty(Mono.error(new EventNotFoundException("Event with id = " + id + " not found")))
                 .flatMap(event -> eventRepository.deleteById(event.getId()));
+    }
+
+    private Mono<UserDto> userFallback(Long ownerId, Throwable t) {
+        return Mono.error(new RuntimeException("User-service unavailable, try later"));
     }
 }
