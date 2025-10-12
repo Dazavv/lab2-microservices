@@ -52,14 +52,11 @@ public class GroupEventService {
     }
 
     public Mono<GroupEvent> getGroupEventById(Long id) {
-        return Mono.fromCallable(() -> {
-            GroupEvent event = groupEventRepository.findById(id)
-                    .orElseThrow(() -> new EventNotFoundException("Group event with id = " + id + " not found"));
-            event.getParticipantIds().size();
-            return event;
-        }).subscribeOn(Schedulers.boundedElastic());
-    }
+        return Mono.fromCallable(() -> groupEventRepository.findByIdWithParticipants(id)
+                        .orElseThrow(() -> new EventNotFoundException("Group event with id = " + id + " not found")))
 
+                .subscribeOn(Schedulers.boundedElastic());
+    }
 
     public Mono<Void> deleteGroupEventById(Long id) {
         return Mono.fromRunnable(() -> {
