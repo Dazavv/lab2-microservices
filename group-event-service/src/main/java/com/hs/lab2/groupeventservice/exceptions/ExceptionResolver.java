@@ -1,4 +1,4 @@
-package com.hs.lab2.eventservice.exceptions;
+package com.hs.lab2.groupeventservice.exceptions;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.api.ErrorMessage;
@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @Slf4j
 @RestControllerAdvice
 public class ExceptionResolver {
+
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<ErrorMessage> userNotFoundException(UserNotFoundException exception) {
         log.warn("UserNotFoundException: ", exception);
@@ -26,17 +27,16 @@ public class ExceptionResolver {
                 .body(new ErrorMessage(exception.getMessage()));
     }
 
-    @ExceptionHandler(EventConflictException.class)
-    public ResponseEntity<ErrorMessage> eventConflictException(EventConflictException exception) {
-        log.warn("EventConflictException: ", exception);
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorMessage(exception.getMessage()));
-    }
-
     @ExceptionHandler(UserServiceUnavailableException.class)
     public ResponseEntity<ErrorMessage> handleUserServiceUnavailable(UserServiceUnavailableException exception) {
         log.warn("UserServiceUnavailableException: ", exception);
+        return ResponseEntity
+                .status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new ErrorMessage(exception.getMessage()));
+    }
+    @ExceptionHandler(EventServiceUnavailableException.class)
+    public ResponseEntity<ErrorMessage> handleEventServiceUnavailable(EventServiceUnavailableException exception) {
+        log.warn("EventServiceUnavailableException: ", exception);
         return ResponseEntity
                 .status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(new ErrorMessage(exception.getMessage()));

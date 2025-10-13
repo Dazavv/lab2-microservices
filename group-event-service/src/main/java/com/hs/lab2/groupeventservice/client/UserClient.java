@@ -1,6 +1,6 @@
-package com.hs.lab2.eventservice.client;
+package com.hs.lab2.groupeventservice.client;
 
-import com.hs.lab2.eventservice.dto.responses.UserDto;
+import com.hs.lab2.groupeventservice.dto.responses.UserDto;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import reactivefeign.spring.config.ReactiveFeignClient;

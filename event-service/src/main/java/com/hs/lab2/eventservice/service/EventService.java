@@ -14,6 +14,7 @@ import reactor.core.publisher.Mono;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -25,8 +26,13 @@ public class EventService {
         return eventRepository.findAll();
     }
 
-    @CircuitBreaker(name = "eventService", fallbackMethod = "userFallback")
-    public Mono<Event> addEvent(String name, String description, LocalDate date, LocalTime startTime, LocalTime endTime, Long ownerId) {
+    @CircuitBreaker(name = "userService", fallbackMethod = "userFallback")
+    public Mono<Event> addEvent(String name,
+                                String description,
+                                LocalDate date,
+                                LocalTime startTime,
+                                LocalTime endTime,
+                                Long ownerId) {
         if (endTime.isBefore(startTime) || date.isBefore(LocalDate.now())) {
             return Mono.error(new IllegalArgumentException("Invalid event time"));
         }
@@ -49,7 +55,6 @@ public class EventService {
                 );
     }
 
-
     public Mono<Event> getEventById(Long id) {
         return eventRepository.findById(id)
                 .switchIfEmpty(Mono.error(new EventNotFoundException("Event with id = " + id + " not found")));
@@ -60,8 +65,19 @@ public class EventService {
                 .switchIfEmpty(Mono.error(new EventNotFoundException("Event with id = " + id + " not found")))
                 .flatMap(event -> eventRepository.deleteById(event.getId()));
     }
+    public Flux<Event> getBusyEventsForUsersBetweenDates(List<Long> userIds,
+                                                         LocalDate startDate,
+                                                         LocalDate endDate) {
+        return eventRepository.findBusyEventsForUsersBetweenDates(userIds, startDate, endDate);
+    }
 
-    private Mono<UserDto> userFallback(Long ownerId, Throwable t) {
+    private Mono<Event> userFallback(String name,
+                                     String description,
+                                     LocalDate date,
+                                     LocalTime startTime,
+                                     LocalTime endTime,
+                                     Long ownerId,
+                                     Throwable t) {
         return Mono.error(new RuntimeException("User-service unavailable, try later"));
     }
 }

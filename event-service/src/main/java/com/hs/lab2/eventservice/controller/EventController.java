@@ -8,10 +8,14 @@ import com.hs.lab2.eventservice.service.EventService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.time.LocalDate;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/event")
@@ -50,5 +54,15 @@ public class EventController {
     public Mono<ResponseEntity<Void>> deleteEventById(@PathVariable @Min(1) Long id) {
         return eventService.deleteEventById(id)
                 .then(Mono.just(ResponseEntity.ok().build()));
+    }
+
+    @GetMapping("/api/v1/event/busy")
+    public Flux<EventDto> getBusyEventsForUsersBetweenDates(
+            @RequestParam List<Long> userIds,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+
+        return eventService.getBusyEventsForUsersBetweenDates(userIds, startDate, endDate)
+                .map(eventMapper::toEventDto);
     }
 }
