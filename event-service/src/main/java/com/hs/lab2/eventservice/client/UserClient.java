@@ -9,6 +9,6 @@ import reactor.core.publisher.Mono;
 @ReactiveFeignClient(name = "user-service")
 public interface UserClient {
 
-    @GetMapping("/api/v1/users/{id}")
+    @GetMapping("/api/v1/user/{id}")
     Mono<UserDto> getUserById(@PathVariable("id") Long id);
 }
