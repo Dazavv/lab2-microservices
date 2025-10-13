@@ -65,6 +65,11 @@ public class EventService {
                 .switchIfEmpty(Mono.error(new EventNotFoundException("Event with id = " + id + " not found")))
                 .flatMap(event -> eventRepository.deleteById(event.getId()));
     }
+    public Flux<Event> getBusyEventsForUsersBetweenDates(List<Long> userIds,
+                                                         LocalDate startDate,
+                                                         LocalDate endDate) {
+        return eventRepository.findBusyEventsForUsersBetweenDates(userIds, startDate, endDate);
+    }
 
     private Mono<Event> userFallback(String name,
                                      String description,
