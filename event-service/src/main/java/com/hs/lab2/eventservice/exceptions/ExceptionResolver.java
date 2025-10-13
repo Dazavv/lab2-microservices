@@ -33,4 +33,12 @@ public class ExceptionResolver {
                 .status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorMessage(exception.getMessage()));
     }
+
+    @ExceptionHandler(UserServiceUnavailableException.class)
+    public ResponseEntity<ErrorMessage> handleUserServiceUnavailable(UserServiceUnavailableException exception) {
+        log.warn("UserServiceUnavailableException: ", exception);
+        return ResponseEntity
+                .status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new ErrorMessage(exception.getMessage()));
+    }
 }

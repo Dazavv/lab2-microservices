@@ -14,6 +14,7 @@ import reactor.core.publisher.Mono;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -25,8 +26,13 @@ public class EventService {
         return eventRepository.findAll();
     }
 
-    @CircuitBreaker(name = "eventService", fallbackMethod = "userFallback")
-    public Mono<Event> addEvent(String name, String description, LocalDate date, LocalTime startTime, LocalTime endTime, Long ownerId) {
+    @CircuitBreaker(name = "userService", fallbackMethod = "userFallback")
+    public Mono<Event> addEvent(String name,
+                                String description,
+                                LocalDate date,
+                                LocalTime startTime,
+                                LocalTime endTime,
+                                Long ownerId) {
         if (endTime.isBefore(startTime) || date.isBefore(LocalDate.now())) {
             return Mono.error(new IllegalArgumentException("Invalid event time"));
         }
@@ -48,7 +54,6 @@ public class EventService {
                                 })
                 );
     }
-
 
     public Mono<Event> getEventById(Long id) {
         return eventRepository.findById(id)
