@@ -66,7 +66,13 @@ public class EventService {
                 .flatMap(event -> eventRepository.deleteById(event.getId()));
     }
 
-    private Mono<UserDto> userFallback(Long ownerId, Throwable t) {
+    private Mono<Event> userFallback(String name,
+                                     String description,
+                                     LocalDate date,
+                                     LocalTime startTime,
+                                     LocalTime endTime,
+                                     Long ownerId,
+                                     Throwable t) {
         return Mono.error(new RuntimeException("User-service unavailable, try later"));
     }
 }
