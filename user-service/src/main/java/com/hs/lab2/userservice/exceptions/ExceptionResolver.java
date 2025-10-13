@@ -1,4 +1,4 @@
-package com.hs.lab1.exceptions;
+package com.hs.lab2.userservice.exceptions;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.api.ErrorMessage;
@@ -16,22 +16,6 @@ public class ExceptionResolver {
         log.warn("UserNotFoundException: ", exception);
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
-                .body(new ErrorMessage(exception.getMessage()));
-    }
-
-    @ExceptionHandler(EventNotFoundException.class)
-    public ResponseEntity<ErrorMessage> eventNotFoundException(EventNotFoundException exception) {
-        log.warn("EventNotFoundException: ", exception);
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(new ErrorMessage(exception.getMessage()));
-    }
-
-    @ExceptionHandler(EventConflictException.class)
-    public ResponseEntity<ErrorMessage> eventConflictException(EventConflictException exception) {
-        log.warn("EventConflictException: ", exception);
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorMessage(exception.getMessage()));
     }
 }

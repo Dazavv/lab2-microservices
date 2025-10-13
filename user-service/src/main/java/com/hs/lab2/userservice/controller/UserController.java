@@ -1,10 +1,11 @@
-package com.hs.lab1.controller;
+package com.hs.lab2.userservice.controller;
 
-import com.hs.lab1.dto.UserDto;
-import com.hs.lab1.entity.User;
-import com.hs.lab1.mapper.UserMapper;
-import com.hs.lab1.requests.CreateUserRequest;
-import com.hs.lab1.service.UserService;
+
+import com.hs.lab2.userservice.dto.UserDto;
+import com.hs.lab2.userservice.entity.User;
+import com.hs.lab2.userservice.mapper.UserMapper;
+import com.hs.lab2.userservice.requests.CreateUserRequest;
+import com.hs.lab2.userservice.service.UserService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;

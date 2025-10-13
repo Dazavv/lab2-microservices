@@ -1,4 +1,4 @@
-package com.hs.lab1.entity;
+package com.hs.lab2.userservice.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -6,9 +6,6 @@ import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Data
 @Entity
@@ -31,7 +28,4 @@ public class User {
     @NotBlank
     @Size(max = 30)
     private String surname;
-
-    @OneToMany(mappedBy = "owner")
-    private List<Event> events = new ArrayList<>();
 }

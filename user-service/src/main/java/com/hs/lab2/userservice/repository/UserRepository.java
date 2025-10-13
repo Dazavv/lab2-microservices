@@ -1,6 +1,6 @@
-package com.hs.lab1.repository;
+package com.hs.lab2.userservice.repository;
 
-import com.hs.lab1.entity.User;
+import com.hs.lab2.userservice.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

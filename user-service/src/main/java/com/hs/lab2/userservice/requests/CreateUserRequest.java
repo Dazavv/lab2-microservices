@@ -1,4 +1,4 @@
-package com.hs.lab1.requests;
+package com.hs.lab2.userservice.requests;
 
 import jakarta.validation.constraints.NotBlank;
 

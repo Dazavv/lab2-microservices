@@ -1,8 +1,8 @@
-package com.hs.lab1.service;
+package com.hs.lab2.userservice.service;
 
-import com.hs.lab1.entity.User;
-import com.hs.lab1.exceptions.UserNotFoundException;
-import com.hs.lab1.repository.UserRepository;
+import com.hs.lab2.userservice.entity.User;
+import com.hs.lab2.userservice.exceptions.UserNotFoundException;
+import com.hs.lab2.userservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

@@ -1,7 +1,8 @@
-package com.hs.lab1.mapper;
+package com.hs.lab2.userservice.mapper;
 
-import com.hs.lab1.dto.UserDto;
-import com.hs.lab1.entity.User;
+
+import com.hs.lab2.userservice.dto.UserDto;
+import com.hs.lab2.userservice.entity.User;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingConstants;
 

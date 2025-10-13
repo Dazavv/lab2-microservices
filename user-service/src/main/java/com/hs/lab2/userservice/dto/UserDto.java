@@ -1,4 +1,4 @@
-package com.hs.lab1.dto;
+package com.hs.lab2.userservice.dto;
 
 import java.util.List;
 
