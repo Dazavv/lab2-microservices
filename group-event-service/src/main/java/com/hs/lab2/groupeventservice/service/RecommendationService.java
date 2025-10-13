@@ -2,14 +2,18 @@ package com.hs.lab2.groupeventservice.service;
 
 
 import com.hs.lab2.groupeventservice.client.EventClient;
+import com.hs.lab2.groupeventservice.dto.responses.EventDto;
 import com.hs.lab2.groupeventservice.dto.responses.TimeInterval;
 import com.hs.lab2.groupeventservice.dto.responses.RecommendTimeSlotDto;
+import com.hs.lab2.groupeventservice.dto.responses.UserDto;
 import com.hs.lab2.groupeventservice.entity.GroupEvent;
 import com.hs.lab2.groupeventservice.enums.GroupEventStatus;
 import com.hs.lab2.groupeventservice.exceptions.EventNotFoundException;
+import com.hs.lab2.groupeventservice.exceptions.EventServiceUnavailableException;
 import com.hs.lab2.groupeventservice.exceptions.NoAvailableSlotsException;
 import com.hs.lab2.groupeventservice.repository.GroupEventRepository;
 import com.hs.lab2.groupeventservice.util.SlotCalculator;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,6 +33,7 @@ public class RecommendationService {
     private final EventClient eventClient;
 
     @Transactional
+    @CircuitBreaker(name = "eventService", fallbackMethod = "userFallback")
     public Flux<RecommendTimeSlotDto> recommendSlots(
             LocalDate periodStart,
             LocalDate periodEnd,
@@ -80,6 +85,13 @@ public class RecommendationService {
                             return Mono.fromCallable(() -> groupEventRepository.save(groupEvent))
                                     .subscribeOn(Schedulers.boundedElastic());
                         });
+    }
+    private Flux<RecommendTimeSlotDto> userFallback(LocalDate periodStart,
+                                                    LocalDate periodEnd,
+                                                    Duration duration,
+                                                    Long groupEventId,
+                                                    Throwable t) {
+        return Flux.error(new EventServiceUnavailableException("Event-service unavailable, try later"));
     }
 
 }

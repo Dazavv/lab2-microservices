@@ -1,11 +1,14 @@
 package com.hs.lab2.groupeventservice.service;
 
 import com.hs.lab2.groupeventservice.client.UserClient;
+import com.hs.lab2.groupeventservice.dto.responses.UserDto;
 import com.hs.lab2.groupeventservice.entity.GroupEvent;
 import com.hs.lab2.groupeventservice.enums.GroupEventStatus;
 import com.hs.lab2.groupeventservice.exceptions.EventNotFoundException;
 import com.hs.lab2.groupeventservice.exceptions.UserNotFoundException;
+import com.hs.lab2.groupeventservice.exceptions.UserServiceUnavailableException;
 import com.hs.lab2.groupeventservice.repository.GroupEventRepository;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -27,7 +30,12 @@ public class GroupEventService {
     }
 
     @Transactional
-    public Mono<GroupEvent> addGroupEvent(String name, String description, List<Long> participantsIds, Long ownerId) {
+    @CircuitBreaker(name = "userService", fallbackMethod = "userFallback")
+    public Mono<GroupEvent> addGroupEvent(String name,
+                                          String description,
+                                          List<Long> participantsIds,
+                                          Long ownerId
+    ) {
         return userClient.getUserById(ownerId)
                 .switchIfEmpty(Mono.error(new UserNotFoundException("Owner with id=" + ownerId + " not found")))
                 .flatMap(owner ->
@@ -67,5 +75,14 @@ public class GroupEventService {
                 .subscribeOn(Schedulers.boundedElastic())
                 .then();
     }
+
+    private Mono<GroupEvent> userFallback(String name,
+                                          String description,
+                                          List<Long> participantsIds,
+                                          Long ownerId,
+                                          Throwable t) {
+        return Mono.error(new UserServiceUnavailableException("User-service unavailable, try later"));
+    }
+
 }
 
