@@ -1,9 +1,7 @@
 package com.hs.lab2.eventservice.repository;
 
-
 import com.hs.lab2.eventservice.entity.Event;
 import org.springframework.data.r2dbc.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.data.repository.reactive.ReactiveCrudRepository;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -37,4 +35,17 @@ public interface EventRepository extends ReactiveCrudRepository<Event, Long> {
             LocalDate startDate,
             LocalDate endDate
     );
+
+    @Query("""
+        SELECT * FROM events
+        WHERE owner_id = :ownerId
+        ORDER BY date DESC, start_time DESC
+        LIMIT :limit OFFSET :offset
+    """)
+    Flux<Event> findByOwnerIdPaged(Long ownerId, long limit, long offset);
+
+    @Query("""
+        SELECT COUNT(*) FROM events WHERE owner_id = :ownerId
+    """)
+    Mono<Long> countByOwnerId(Long ownerId);
 }

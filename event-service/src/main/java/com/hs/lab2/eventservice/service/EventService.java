@@ -1,13 +1,15 @@
 package com.hs.lab2.eventservice.service;
 
 import com.hs.lab2.eventservice.client.UserClient;
-import com.hs.lab2.eventservice.dto.responses.UserDto;
 import com.hs.lab2.eventservice.entity.Event;
 import com.hs.lab2.eventservice.exceptions.EventConflictException;
 import com.hs.lab2.eventservice.exceptions.EventNotFoundException;
 import com.hs.lab2.eventservice.repository.EventRepository;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -79,5 +81,21 @@ public class EventService {
                                      Long ownerId,
                                      Throwable t) {
         return Mono.error(new RuntimeException("User-service unavailable, try later"));
+    }
+
+
+    public Flux<Event> getUserEventsById(Long ownerId, Pageable pageable) {
+        long limit = pageable.getPageSize();
+        long offset = pageable.getOffset();
+
+        return eventRepository.findByOwnerIdPaged(ownerId, limit, offset);
+    }
+
+    public Mono<Page<Event>> getUserEventsPage(Long ownerId, Pageable pageable) {
+        return eventRepository.countByOwnerId(ownerId)
+                .flatMap(total -> eventRepository.findByOwnerIdPaged(ownerId, pageable.getPageSize(), pageable.getOffset())
+                        .collectList()
+                        .map(events -> new PageImpl<>(events, pageable, total))
+                );
     }
 }
