@@ -1,4 +1,4 @@
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
                         id BIGSERIAL PRIMARY KEY,
                         name VARCHAR(20) NOT NULL,
                         description VARCHAR(200),

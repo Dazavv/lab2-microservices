@@ -1,4 +1,4 @@
-CREATE TABLE group_events (
+CREATE TABLE IF NOT EXISTS group_events (
                               id BIGSERIAL PRIMARY KEY,
                               name VARCHAR(30) NOT NULL,
                               description VARCHAR(200),
