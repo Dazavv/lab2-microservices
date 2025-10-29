@@ -1,10 +1,13 @@
 package com.hs.lab2.eventservice.service;
 
 import com.hs.lab2.eventservice.client.UserClient;
+import com.hs.lab2.eventservice.dto.responses.UserDto;
 import com.hs.lab2.eventservice.entity.Event;
 import com.hs.lab2.eventservice.exceptions.EventConflictException;
 import com.hs.lab2.eventservice.exceptions.EventNotFoundException;
+import com.hs.lab2.eventservice.exceptions.UserNotFoundException;
 import com.hs.lab2.eventservice.repository.EventRepository;
+import feign.FeignException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -28,23 +31,22 @@ public class EventService {
         return eventRepository.findAll();
     }
 
-    @CircuitBreaker(name = "userService", fallbackMethod = "userFallback")
     public Mono<Event> addEvent(String name,
                                 String description,
                                 LocalDate date,
                                 LocalTime startTime,
                                 LocalTime endTime,
                                 Long ownerId) {
-        if (endTime.isBefore(startTime) || date.isBefore(LocalDate.now())) {
-            return Mono.error(new IllegalArgumentException("Invalid event time"));
+        if (endTime.isBefore(startTime) || date.isBefore(LocalDate.now()) || endTime.equals(startTime)) {
+            return Mono.error(new EventConflictException("Invalid event time"));
         }
 
-        return userClient.getUserById(ownerId)
-                .switchIfEmpty(Mono.error(new IllegalArgumentException("User not found")))
+        return getUserByIdWithCircuitBreaker(ownerId)
                 .flatMap(user ->
                         eventRepository.existsByOwnerAndDateAndTimeOverlap(ownerId, date, startTime, endTime)
                                 .flatMap(conflict -> {
-                                    if (conflict) return Mono.error(new EventConflictException("User already has an event at this time"));
+                                    if (conflict)
+                                        return Mono.error(new EventConflictException("User already has an event at this time"));
                                     Event event = new Event();
                                     event.setName(name);
                                     event.setDescription(description);
@@ -54,6 +56,17 @@ public class EventService {
                                     event.setOwnerId(ownerId);
                                     return eventRepository.save(event);
                                 })
+                );
+    }
+
+    @CircuitBreaker(name = "userService", fallbackMethod = "userFallback")
+    private Mono<UserDto> getUserByIdWithCircuitBreaker(Long ownerId) {
+        return userClient.getUserById(ownerId)
+                .onErrorResume(FeignException.NotFound.class, e ->
+                        Mono.error(new UserNotFoundException("User with id = " + ownerId + " not found"))
+                )
+                .onErrorResume(FeignException.class, e ->
+                        Mono.error(new RuntimeException("User-service error: " + e.status() + " " + e.getMessage()))
                 );
     }
 
@@ -82,7 +95,6 @@ public class EventService {
                                      Throwable t) {
         return Mono.error(new RuntimeException("User-service unavailable, try later"));
     }
-
 
     public Flux<Event> getUserEventsById(Long ownerId, Pageable pageable) {
         long limit = pageable.getPageSize();
