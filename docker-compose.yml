@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # 1. Config Server
   config-server:
     build: ./config-server
     container_name: config-server
@@ -19,12 +18,11 @@ services:
       retries: 5
       start_period: 30s
 
-  # 2. Бд
   postgres-users:
     image: postgres:15-alpine
     container_name: postgres-users
     environment:
-      POSTGRES_DB: users
+      POSTGRES_DB: users-db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
@@ -32,7 +30,7 @@ services:
     networks:
       - microservices-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d \"users-db\" -h 127.0.0.1 -p 5432"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -71,7 +69,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # 3. Eureka Server
   eureka-server:
     build: ./eureka-server
     container_name: eureka-server
@@ -92,7 +89,6 @@ services:
       retries: 5
       start_period: 40s
 
-  # 4. User Service
   user-service:
     build: ./user-service
     container_name: user-service
@@ -101,8 +97,9 @@ services:
     environment:
       SPRING_CONFIG_IMPORT: "configserver:http://config-server:8888"
       SPRING_APPLICATION_NAME: user-service
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-users:5432/users
-      SPRING_R2DBC_URL: r2dbc:postgresql://postgres-users:5432/users
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-users:5432/users-db?sslmode=disable
+      SPRING_R2DBC_URL: r2dbc:postgresql://postgres:postgres@postgres-users:5432/users-db
+      SPRING_PROFILES_ACTIVE: docker
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://eureka-server:8761/eureka"
     depends_on:
       config-server:
@@ -120,7 +117,6 @@ services:
       retries: 5
       start_period: 60s
 
-  # 5. Event Service
   event-service:
     build: ./event-service
     container_name: event-service
@@ -149,7 +145,6 @@ services:
       retries: 5
       start_period: 60s
 
-  # 6. Group Event Service
   group-event-service:
     build: ./group-event-service
     container_name: group-event-service
@@ -176,7 +171,6 @@ services:
       retries: 5
       start_period: 60s
 
-  # 7. Gateway Service
   gateway-service:
     build: ./gateway-service
     container_name: gateway-service
