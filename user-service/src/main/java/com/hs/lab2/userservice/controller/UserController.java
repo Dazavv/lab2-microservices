@@ -1,6 +1,4 @@
 package com.hs.lab2.userservice.controller;
-
-
 import com.hs.lab2.userservice.dto.UserDto;
 import com.hs.lab2.userservice.entity.User;
 import com.hs.lab2.userservice.mapper.UserMapper;
@@ -18,8 +16,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
+import reactor.core.publisher.Mono;
 
 @RestController
 @RequestMapping("/api/v1/user")
@@ -29,36 +26,41 @@ public class UserController {
     private final UserMapper userMapper;
 
     @PostMapping
-    public ResponseEntity<UserDto> addUser(@Valid @RequestBody CreateUserRequest request) {
-        User user = userService.addUser(request.username(), request.name(), request.surname());
-        UserDto userDto = userMapper.toUserDto(user);
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(userDto);
+    public Mono<ResponseEntity<UserDto>> addUser(@Valid @RequestBody CreateUserRequest request) {
+        return userService.addUser(
+                        request.username(),
+                        request.name(),
+                        request.surname()
+                )
+                .map(userMapper::toUserDto)
+                .map(dto -> ResponseEntity.status(HttpStatus.CREATED).body(dto));
     }
 
     @GetMapping
-    public ResponseEntity<List<UserDto>> getAllUsers() {
-        List<User> users = userService.getAllUsers();
-        return ResponseEntity.ok(userMapper.toUserDtoList(users));
+    public Mono<ResponseEntity<Page<UserDto>>> getAllUsers(
+            @PageableDefault(page = 0, size = 25, sort = "username", direction = Sort.Direction.ASC) Pageable pageable
+    ) {
+        int maxSize = Math.min(pageable.getPageSize(), 100);
+        Pageable safePageable = PageRequest.of(pageable.getPageNumber(), maxSize, pageable.getSort());
+
+        return userService.getAllUsers(safePageable)
+                .map(users -> users.map(userMapper::toUserDto))
+                .map(ResponseEntity::ok);
     }
 
-    @GetMapping(path = "/id/{id}")
-    public ResponseEntity<UserDto> getUserById(@PathVariable @Min(1) Long id) {
-        User user = userService.getUserById(id);
-        return ResponseEntity.ok(userMapper.toUserDto(user));
+
+    @GetMapping(path = "/{id}")
+    public Mono<ResponseEntity<UserDto>> getUserById(@PathVariable @Min(1) Long id) {
+        return userService.getUserById(id)
+                .map(userMapper::toUserDto)
+                .map(ResponseEntity::ok);
     }
 
     @GetMapping(path = "/by-username/{username}")
-    public ResponseEntity<UserDto> getUserByUsername(@PathVariable @NotBlank String username) {
-        User user = userService.getUserByUsername(username);
-        return ResponseEntity.ok(userMapper.toUserDto(user));
-    }
-
-    @DeleteMapping(path = "/id/{id}")
-    public ResponseEntity<Void> deleteUserById(@PathVariable @Min(1) Long id) {
-        userService.deleteUserById(id);
-        return ResponseEntity.noContent().build();
+    public Mono<ResponseEntity<UserDto>> getUserByUsername(@PathVariable @NotBlank String username) {
+        return userService.getUserByUsername(username)
+                .map(userMapper::toUserDto)
+                .map(ResponseEntity::ok);
     }
 
     @GetMapping(path = "/search")
@@ -74,4 +76,9 @@ public class UserController {
         return ResponseEntity.ok(dtoPage);
     }
 
+    @DeleteMapping(path = "/id/{id}")
+    public Mono<Void> deleteUserById(@PathVariable @Min(1) Long id) {
+        return userService.deleteUserById(id)
+                .then(Mono.just(ResponseEntity.ok().build()).then());
+    }
 }

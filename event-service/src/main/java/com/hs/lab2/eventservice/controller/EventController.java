@@ -8,6 +8,8 @@ import com.hs.lab2.eventservice.service.EventService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -48,6 +50,16 @@ public class EventController {
         return eventService.getEventById(id)
                 .map(eventMapper::toEventDto)
                 .map(ResponseEntity::ok);
+    }
+
+    @GetMapping("/owner/{id}")
+    public Flux<Event> getUserEvents(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        return eventService.getUserEventsById(id, pageable);
     }
 
     @DeleteMapping(path = "/{id}")

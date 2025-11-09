@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @Slf4j
 @RestControllerAdvice
 public class ExceptionResolver {
-
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<ErrorMessage> userNotFoundException(UserNotFoundException exception) {
         log.warn("UserNotFoundException: ", exception);

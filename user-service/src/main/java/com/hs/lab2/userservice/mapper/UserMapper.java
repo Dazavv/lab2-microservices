@@ -1,6 +1,5 @@
 package com.hs.lab2.userservice.mapper;
 
-
 import com.hs.lab2.userservice.dto.UserDto;
 import com.hs.lab2.userservice.entity.User;
 import org.mapstruct.Mapper;

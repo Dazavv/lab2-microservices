@@ -7,45 +7,57 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 @Service
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
 
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    public Mono<Page<User>> getAllUsers(Pageable pageable) {
+        return Mono.fromCallable(() -> userRepository.findAll(pageable))
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
-    public User addUser(String username, String name, String surname) {
-        boolean exists = userRepository.existsByUsername(username);
-        if (exists)
-            throw new IllegalArgumentException("user with username = " + username + " already exists"); //TODO мб пользовательский эксепшен сделать
+    public Mono<User> addUser(String username, String name, String surname) {
+        return Mono.fromCallable(() -> {
+            if (userRepository.existsByUsername(username)) {
+                throw new IllegalArgumentException("user with username = " + username + " already exists");
+            }
 
-        User user = new User();
-        user.setUsername(username);
-        user.setName(name);
-        user.setSurname(surname);
+            User user = new User();
+            user.setUsername(username);
+            user.setName(name);
+            user.setSurname(surname);
 
-        return userRepository.save(user);
+            return userRepository.save(user);
+        }).subscribeOn(Schedulers.boundedElastic());
     }
 
-    public User getUserById(Long id) {
-        return userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException("User with id = " + id + " not found"));
+    public Mono<User> getUserById(Long id) {
+        return Mono.fromCallable(() -> userRepository.findById(id)
+                        .orElseThrow(() -> new UserNotFoundException("User with id = " + id + " not found")))
+
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
-    public User getUserByUsername(String username) {
-        return userRepository.findByUsername(username)
-                .orElseThrow(() -> new UserNotFoundException("user with username = " + username + " does not exist"));
+    public Mono<User> getUserByUsername(String username) {
+        return Mono.fromCallable(() -> userRepository.findByUsername(username)
+                        .orElseThrow(() -> new UserNotFoundException("User with username = " + username + " not found")))
+
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
-    public void deleteUserById(Long id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new UserNotFoundException("User with id = " + id + " not found"));
-        userRepository.delete(user);
+    public Mono<Void> deleteUserById(Long id) {
+        return Mono.fromRunnable(() -> {
+                    if (!userRepository.existsById(id))
+                        throw new UserNotFoundException("User with id = " + id + " not found");
+                    userRepository.deleteById(id);
+                })
+                .subscribeOn(Schedulers.boundedElastic())
+                .then();
     }
 
     public Page<User> searchByUsername(String query, Pageable pageable) {
