@@ -77,6 +77,7 @@ services:
     environment:
       SPRING_CONFIG_IMPORT: "configserver:http://config-server:8888"
       SPRING_APPLICATION_NAME: eureka-server
+      SPRING_PROFILES_ACTIVE: docker
     depends_on:
       config-server:
         condition: service_healthy
@@ -97,10 +98,11 @@ services:
     environment:
       SPRING_CONFIG_IMPORT: "configserver:http://config-server:8888"
       SPRING_APPLICATION_NAME: user-service
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-users:5432/users-db?sslmode=disable
-      SPRING_R2DBC_URL: r2dbc:postgresql://postgres:postgres@postgres-users:5432/users-db
       SPRING_PROFILES_ACTIVE: docker
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://eureka-server:8761/eureka"
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-users:5432/users-db?sslmode=disable
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+#      SPRING_R2DBC_URL: r2dbc:postgresql://postgres:postgres@postgres-users:5432/users-db
     depends_on:
       config-server:
         condition: service_healthy
@@ -125,10 +127,11 @@ services:
     environment:
       SPRING_CONFIG_IMPORT: "configserver:http://config-server:8888"
       SPRING_APPLICATION_NAME: event-service
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-events:5432/events_db
-      SPRING_R2DBC_URL: r2dbc:postgresql://postgres-events:5432/events_db
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_R2DBC_URL: r2dbc:postgresql://postgres:postgres@postgres-events:5432/events_db
+      SPRING_FLYWAY_USER: postgres
+      SPRING_FLYWAY_PASSWORD: postgres
       SPRING_FLYWAY_URL: jdbc:postgresql://postgres-events:5432/events_db
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://eureka-server:8761/eureka"
     depends_on:
       config-server:
         condition: service_healthy
@@ -150,11 +153,16 @@ services:
     container_name: group-event-service
     ports:
       - "8083:8083"
+      - "5005:5005"
     environment:
       SPRING_CONFIG_IMPORT: "configserver:http://config-server:8888"
       SPRING_APPLICATION_NAME: group-event-service
+      SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-group-events:5432/group-events-db
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://eureka-server:8761/eureka"
+      SPRING_FLYWAY_USER: postgres
+      SPRING_FLYWAY_PASSWORD: postgres
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
     depends_on:
       config-server:
         condition: service_healthy
@@ -179,6 +187,7 @@ services:
     environment:
       SPRING_CONFIG_IMPORT: "configserver:http://config-server:8888"
       SPRING_APPLICATION_NAME: gateway-service
+      SPRING_PROFILES_ACTIVE: docker
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://eureka-server:8761/eureka"
     depends_on:
       config-server:

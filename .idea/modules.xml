@@ -5,6 +5,7 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/event-service.main.iml" filepath="$PROJECT_DIR$/.idea/modules/event-service.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/group-event-service.main.iml" filepath="$PROJECT_DIR$/.idea/modules/group-event-service.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/lab2-microservices.iml" filepath="$PROJECT_DIR$/lab2-microservices.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/user-service.main.iml" filepath="$PROJECT_DIR$/.idea/modules/user-service.main.iml" />
     </modules>
   </component>
 </project>

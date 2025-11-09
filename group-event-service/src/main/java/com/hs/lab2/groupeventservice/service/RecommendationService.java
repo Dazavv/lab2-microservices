@@ -28,67 +28,40 @@ import java.util.List;
 public class RecommendationService {
     private final GroupEventRepository groupEventRepository;
     private final EventClient eventClient;
+    private final GroupEventLoader loader;
 
     @Transactional
-    public Flux<RecommendTimeSlotDto> recommendSlots(
-            LocalDate periodStart,
-            LocalDate periodEnd,
-            Duration duration,
-            Long groupEventId
-    ) {
-        Mono<List<Long>> participantIdsMono = Mono.fromCallable(() -> {
-                    var ge = groupEventRepository.findById(groupEventId)
-                            .orElseThrow(() -> new EventNotFoundException("GroupEvent not found: " + groupEventId));
-                    ge.getParticipantIds().size();
-                    return List.copyOf(ge.getParticipantIds());
-                })
-                .subscribeOn(Schedulers.boundedElastic());
+    public Flux<RecommendTimeSlotDto> recommendSlots(LocalDate periodStart, LocalDate periodEnd, Duration duration, Long groupEventId) {
+        Mono<List<Long>> participantIdsMono = Mono.fromCallable(
+                () -> loader.loadParticipantIds(groupEventId)).subscribeOn(Schedulers.boundedElastic());
 
-        return participantIdsMono.flatMapMany(participantIds ->
-                fetchBusyIntervals(participantIds, periodStart, periodEnd)
-                        .collectList()
-                        .flatMapMany(busyIntervals -> {
-                            var free = SlotCalculator.findCommonFreeSlots(periodStart, periodEnd, busyIntervals, duration);
-                            if (free.isEmpty())
-                                return Flux.error(new NoAvailableSlotsException("No free slots available"));
-                            return Flux.fromIterable(free.stream().limit(5).toList());
-                        })
-        );
+        return participantIdsMono.flatMapMany(participantIds -> fetchBusyIntervals(participantIds, periodStart, periodEnd).collectList().flatMapMany(busyIntervals -> {
+            var free = SlotCalculator.findCommonFreeSlots(periodStart, periodEnd, busyIntervals, duration);
+            if (free.isEmpty()) return Flux.error(new NoAvailableSlotsException("No free slots available"));
+            return Flux.fromIterable(free.stream().limit(5).toList());
+        }));
     }
 
 
     @CircuitBreaker(name = "eventService", fallbackMethod = "fetchBusyIntervalsFallback")
-    public Flux<TimeInterval> fetchBusyIntervals(List<Long> participantIds,
-                                                 LocalDate start,
-                                                 LocalDate end) {
-        return eventClient.getBusyEventsForUsersBetweenDates(participantIds, start, end)
-                .map(e -> new TimeInterval(e.date(), e.startTime(), e.endTime()));
+    public Flux<TimeInterval> fetchBusyIntervals(List<Long> participantIds, LocalDate start, LocalDate end) {
+        return eventClient.getBusyEventsForUsersBetweenDates(participantIds, start, end).map(e -> new TimeInterval(e.date(), e.startTime(), e.endTime()));
     }
 
     @SuppressWarnings("unused")
-    public Flux<TimeInterval> fetchBusyIntervalsFallback(List<Long> participantIds,
-                                                         LocalDate start,
-                                                         LocalDate end,
-                                                         Throwable t) {
+    public Flux<TimeInterval> fetchBusyIntervalsFallback(List<Long> participantIds, LocalDate start, LocalDate end, Throwable t) {
         return Flux.error(new EventServiceUnavailableException("Event-service unavailable, try later"));
     }
 
     @Transactional
     public Mono<GroupEvent> bookSlot(Long id, LocalDate date, LocalTime startTime, LocalTime endTime) {
-        return Mono.fromCallable(() -> groupEventRepository.findById(id))
-                .subscribeOn(Schedulers.boundedElastic())
-                .flatMap(optional ->
-                        optional.map(Mono::just)
-                                .orElseGet(() -> Mono.error(new EventNotFoundException("GroupEvent not found: " + id)))
-                )
-                .flatMap(groupEvent -> {
-                    groupEvent.setDate(date);
-                    groupEvent.setStartTime(startTime);
-                    groupEvent.setEndTime(endTime);
-                    groupEvent.setStatus(GroupEventStatus.CONFIRMED);
+        return Mono.fromCallable(() -> groupEventRepository.findById(id)).subscribeOn(Schedulers.boundedElastic()).flatMap(optional -> optional.map(Mono::just).orElseGet(() -> Mono.error(new EventNotFoundException("GroupEvent not found: " + id)))).flatMap(groupEvent -> {
+            groupEvent.setDate(date);
+            groupEvent.setStartTime(startTime);
+            groupEvent.setEndTime(endTime);
+            groupEvent.setStatus(GroupEventStatus.CONFIRMED);
 
-                    return Mono.fromCallable(() -> groupEventRepository.save(groupEvent))
-                            .subscribeOn(Schedulers.boundedElastic());
-                });
+            return Mono.fromCallable(() -> groupEventRepository.save(groupEvent)).subscribeOn(Schedulers.boundedElastic());
+        });
     }
 }
