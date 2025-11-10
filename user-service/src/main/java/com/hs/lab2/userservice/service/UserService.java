@@ -7,7 +7,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -60,7 +59,10 @@ public class UserService {
                 .then();
     }
 
-    public Page<User> searchByUsername(String query, Pageable pageable) {
-        return userRepository.findByUsernameContainingIgnoreCase(query, pageable);
+    public Mono<Page<User>> searchByUsername(String query, Pageable pageable) {
+        return Mono.fromCallable(() ->
+                        userRepository.findByUsernameContainingIgnoreCase(query, pageable)
+                )
+                .subscribeOn(Schedulers.boundedElastic());
     }
 }
