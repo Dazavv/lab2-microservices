@@ -1,6 +1,7 @@
 package com.hs.lab2.groupeventservice.client;
 
 import com.hs.lab2.groupeventservice.dto.responses.EventDto;
+import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import reactivefeign.spring.config.ReactiveFeignClient;
@@ -8,6 +9,7 @@ import reactor.core.publisher.Flux;
 
 import java.util.List;
 
+@Component
 @ReactiveFeignClient(name = "event-service")
 public interface EventClient {
 

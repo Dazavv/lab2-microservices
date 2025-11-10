@@ -86,7 +86,7 @@ public class EventService {
         return eventRepository.findBusyEventsForUsersBetweenDates(userIds, startDate, endDate);
     }
 
-    private Mono<Event> userFallback(String name,
+    public Mono<Event> userFallback(String name,
                                      String description,
                                      LocalDate date,
                                      LocalTime startTime,

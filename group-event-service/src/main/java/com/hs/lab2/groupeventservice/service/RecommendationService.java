@@ -1,6 +1,7 @@
 package com.hs.lab2.groupeventservice.service;
 
 import com.hs.lab2.groupeventservice.client.EventClient;
+import com.hs.lab2.groupeventservice.dto.responses.GroupEventDto;
 import com.hs.lab2.groupeventservice.dto.responses.RecommendTimeSlotDto;
 import com.hs.lab2.groupeventservice.dto.responses.TimeInterval;
 import com.hs.lab2.groupeventservice.entity.GroupEvent;
@@ -8,6 +9,7 @@ import com.hs.lab2.groupeventservice.enums.GroupEventStatus;
 import com.hs.lab2.groupeventservice.exceptions.EventNotFoundException;
 import com.hs.lab2.groupeventservice.exceptions.EventServiceUnavailableException;
 import com.hs.lab2.groupeventservice.exceptions.NoAvailableSlotsException;
+import com.hs.lab2.groupeventservice.mapper.GroupEventMapper;
 import com.hs.lab2.groupeventservice.repository.GroupEventRepository;
 import com.hs.lab2.groupeventservice.util.SlotCalculator;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
@@ -27,6 +29,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RecommendationService {
     private final GroupEventRepository groupEventRepository;
+    private final GroupEventMapper groupEventMapper;
     private final EventClient eventClient;
     private final GroupEventLoader loader;
 
@@ -54,14 +57,19 @@ public class RecommendationService {
     }
 
     @Transactional
-    public Mono<GroupEvent> bookSlot(Long id, LocalDate date, LocalTime startTime, LocalTime endTime) {
-        return Mono.fromCallable(() -> groupEventRepository.findById(id)).subscribeOn(Schedulers.boundedElastic()).flatMap(optional -> optional.map(Mono::just).orElseGet(() -> Mono.error(new EventNotFoundException("GroupEvent not found: " + id)))).flatMap(groupEvent -> {
-            groupEvent.setDate(date);
-            groupEvent.setStartTime(startTime);
-            groupEvent.setEndTime(endTime);
-            groupEvent.setStatus(GroupEventStatus.CONFIRMED);
+    public Mono<GroupEventDto> bookSlot(Long id, LocalDate date, LocalTime startTime, LocalTime endTime) {
+        return Mono.fromCallable(() -> {
+            GroupEvent ge = groupEventRepository.findByIdWithParticipants(id)
+                    .orElseThrow(() -> new EventNotFoundException("GroupEvent not found: " + id));
 
-            return Mono.fromCallable(() -> groupEventRepository.save(groupEvent)).subscribeOn(Schedulers.boundedElastic());
-        });
+            ge.setDate(date);
+            ge.setStartTime(startTime);
+            ge.setEndTime(endTime);
+            ge.setStatus(GroupEventStatus.CONFIRMED);
+
+            groupEventRepository.save(ge);
+
+            return groupEventMapper.toGroupEventDto(ge);
+        }).subscribeOn(Schedulers.boundedElastic());
     }
 }

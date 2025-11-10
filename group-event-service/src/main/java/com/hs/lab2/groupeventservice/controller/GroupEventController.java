@@ -67,12 +67,10 @@ public class GroupEventController {
         );
     }
 
-    @PostMapping(path = "/book")
-    public Mono<ResponseEntity<GroupEventDto>> bookGroupEvent(@Valid @RequestBody BookSlotRequest request) {
-        return recommendationService.bookSlot(
-                request.groupEventId(), request.date(), request.startTime(), request.endTime()
-                )
-                .map(groupEventMapper::toGroupEventDto)
+    @PostMapping("/book")
+    public Mono<ResponseEntity<GroupEventDto>> bookGroupEvent(@Valid @RequestBody BookSlotRequest req) {
+        return recommendationService.bookSlot(req.groupEventId(), req.date(), req.startTime(), req.endTime())
                 .map(ResponseEntity::ok);
     }
+
 }
