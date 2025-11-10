@@ -17,4 +17,12 @@ public class ExceptionResolver {
                 .status(HttpStatus.NOT_FOUND)
                 .body(new ErrorMessage(exception.getMessage()));
     }
+
+    @ExceptionHandler(UserAlreadyExistsException.class)
+    public ResponseEntity<ErrorMessage> userAlreadyExistsException(UserAlreadyExistsException exception) {
+        log.warn("UserAlreadyExistsException: ", exception);
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(new ErrorMessage(exception.getMessage()));
+    }
 }

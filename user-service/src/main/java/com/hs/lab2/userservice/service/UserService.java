@@ -1,6 +1,7 @@
 package com.hs.lab2.userservice.service;
 
 import com.hs.lab2.userservice.entity.User;
+import com.hs.lab2.userservice.exceptions.UserAlreadyExistsException;
 import com.hs.lab2.userservice.exceptions.UserNotFoundException;
 import com.hs.lab2.userservice.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +24,7 @@ public class UserService {
     public Mono<User> addUser(String username, String name, String surname) {
         return Mono.fromCallable(() -> {
             if (userRepository.existsByUsername(username)) {
-                throw new IllegalArgumentException("user with username = " + username + " already exists");
+                throw new UserAlreadyExistsException("user with username = " + username + " already exists");
             }
 
             User user = new User();

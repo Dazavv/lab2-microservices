@@ -12,7 +12,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -82,13 +81,28 @@ public class UserController {
     @GetMapping(path = "/search")
     public Mono<ResponseEntity<Page<UserDto>>> searchByUsername(
             @RequestParam(name = "q", defaultValue = "") String q,
-            @PageableDefault(size = 25, sort = "username", direction = Sort.Direction.ASC) Pageable pageable
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "25") int size,
+            @RequestParam(required = false) List<String> sort
     ) {
-        int maxSize = Math.min(pageable.getPageSize(), 100);
-        Pageable safe = PageRequest.of(pageable.getPageNumber(), maxSize, pageable.getSort());
+        int safeSize = Math.min(Math.max(size, 1), 100);
+        int safePage = Math.max(0, page);
 
-        return userService.searchByUsername(q, safe)
-                .map(page -> page.map(userMapper::toUserDto))
+        Sort s = (sort == null || sort.isEmpty())
+                ? Sort.by("username").ascending()
+                : Sort.by(
+                sort.stream().map(sv -> {
+                    String[] parts = sv.split(",", 2);
+                    Sort.Direction dir = (parts.length > 1 && "desc".equalsIgnoreCase(parts[1]))
+                            ? Sort.Direction.DESC : Sort.Direction.ASC;
+                    return new Sort.Order(dir, parts[0]);
+                }).toList()
+        );
+
+        Pageable pageable = PageRequest.of(safePage, safeSize, s);
+
+        return userService.searchByUsername(q, pageable)
+                .map(p -> p.map(userMapper::toUserDto))
                 .map(ResponseEntity::ok);
     }
 
