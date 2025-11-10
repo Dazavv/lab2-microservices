@@ -35,7 +35,7 @@ public class RecommendationService {
         Mono<List<Long>> participantIdsMono = Mono.fromCallable(
                 () -> loader.loadParticipantIds(groupEventId)).subscribeOn(Schedulers.boundedElastic());
 
-        return participantIdsMono.flatMapMany(participantIds -> fetchBusyIntervals(participantIds, periodStart, periodEnd).collectList().flatMapMany(busyIntervals -> {
+        return participantIdsMono.flatMapMany(participantIds -> fetchBusyIntervals(participantIds, periodStart.toString(), periodEnd.toString()).collectList().flatMapMany(busyIntervals -> {
             var free = SlotCalculator.findCommonFreeSlots(periodStart, periodEnd, busyIntervals, duration);
             if (free.isEmpty()) return Flux.error(new NoAvailableSlotsException("No free slots available"));
             return Flux.fromIterable(free.stream().limit(5).toList());
@@ -44,7 +44,7 @@ public class RecommendationService {
 
 
     @CircuitBreaker(name = "eventService", fallbackMethod = "fetchBusyIntervalsFallback")
-    public Flux<TimeInterval> fetchBusyIntervals(List<Long> participantIds, LocalDate start, LocalDate end) {
+    public Flux<TimeInterval> fetchBusyIntervals(List<Long> participantIds, String start, String end) {
         return eventClient.getBusyEventsForUsersBetweenDates(participantIds, start, end).map(e -> new TimeInterval(e.date(), e.startTime(), e.endTime()));
     }
 

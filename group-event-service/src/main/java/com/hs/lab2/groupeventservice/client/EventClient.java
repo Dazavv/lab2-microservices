@@ -6,7 +6,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import reactivefeign.spring.config.ReactiveFeignClient;
 import reactor.core.publisher.Flux;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @ReactiveFeignClient(name = "event-service")
@@ -14,8 +13,8 @@ public interface EventClient {
 
     @GetMapping("/api/v1/event/busy")
     Flux<EventDto> getBusyEventsForUsersBetweenDates(
-            @RequestParam List<Long> userIds,
-            @RequestParam LocalDate startDate,
-            @RequestParam LocalDate endDate
+            @RequestParam("userIds") List<Long> userIds,
+            @RequestParam("startDate") String startDate,
+            @RequestParam("endDate") String endDate
     );
 }

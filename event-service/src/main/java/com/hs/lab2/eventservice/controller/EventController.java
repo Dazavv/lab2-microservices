@@ -68,7 +68,7 @@ public class EventController {
                 .then(Mono.just(ResponseEntity.ok().build()));
     }
 
-    @GetMapping("/api/v1/event/busy")
+    @GetMapping("/busy")
     public Flux<EventDto> getBusyEventsForUsersBetweenDates(
             @RequestParam List<Long> userIds,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
