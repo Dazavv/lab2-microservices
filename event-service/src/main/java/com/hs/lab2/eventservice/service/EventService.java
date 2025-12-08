@@ -6,6 +6,7 @@ import com.hs.lab2.eventservice.entity.Event;
 import com.hs.lab2.eventservice.exceptions.EventConflictException;
 import com.hs.lab2.eventservice.exceptions.EventNotFoundException;
 import com.hs.lab2.eventservice.exceptions.UserNotFoundException;
+import com.hs.lab2.eventservice.exceptions.UserServiceUnavailableException;
 import com.hs.lab2.eventservice.repository.EventRepository;
 import feign.FeignException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
@@ -31,6 +32,7 @@ public class EventService {
         return eventRepository.findAll();
     }
 
+    @CircuitBreaker(name = "userService", fallbackMethod = "userFallback")
     public Mono<Event> addEvent(String name,
                                 String description,
                                 LocalDate date,
@@ -59,7 +61,6 @@ public class EventService {
                 );
     }
 
-    @CircuitBreaker(name = "userService", fallbackMethod = "userFallback")
     private Mono<UserDto> getUserByIdWithCircuitBreaker(Long ownerId) {
         return userClient.getUserById(ownerId)
                 .onErrorResume(FeignException.NotFound.class, e ->
@@ -87,13 +88,13 @@ public class EventService {
     }
 
     public Mono<Event> userFallback(String name,
-                                     String description,
-                                     LocalDate date,
-                                     LocalTime startTime,
-                                     LocalTime endTime,
-                                     Long ownerId,
-                                     Throwable t) {
-        return Mono.error(new RuntimeException("User-service unavailable, try later"));
+                                    String description,
+                                    LocalDate date,
+                                    LocalTime startTime,
+                                    LocalTime endTime,
+                                    Long ownerId,
+                                    Throwable t) {
+        return Mono.error(new UserServiceUnavailableException("User-service unavailable, try later"));
     }
 
     public Flux<Event> getUserEventsById(Long ownerId, Pageable pageable) {

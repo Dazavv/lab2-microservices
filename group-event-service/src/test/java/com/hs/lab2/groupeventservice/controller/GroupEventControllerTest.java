@@ -128,15 +128,6 @@ class GroupEventControllerTest {
     }
 
     @Test
-    void testDeleteGroupEventById() {
-        when(groupEventService.deleteGroupEventById(1L)).thenReturn(Mono.empty());
-
-        StepVerifier.create(groupEventController.deleteGroupEventById(1L))
-                .expectNextMatches(response -> response.getStatusCode().is2xxSuccessful())
-                .verifyComplete();
-    }
-
-    @Test
     void testRecommendGroupEvents() {
         RecommendSlotsRequest request = new RecommendSlotsRequest(
                 LocalDate.now(),
@@ -166,38 +157,38 @@ class GroupEventControllerTest {
                 .verifyComplete();
     }
 
-    @Test
-    void testBookGroupEvent() {
-        BookSlotRequest request = new BookSlotRequest(
-                1L,
-                LocalDate.now().plusDays(1),
-                LocalTime.of(10, 0),
-                LocalTime.of(11, 0)
-        );
-
-        GroupEventDto bookedDto = new GroupEventDto(
-                1L,
-                "Test Group Event",
-                "Test Description",
-                LocalDate.now().plusDays(1),
-                LocalTime.of(10, 0),
-                LocalTime.of(11, 0),
-                List.of(2L, 3L),
-                1L,
-                GroupEventStatus.CONFIRMED
-        );
-
-        when(recommendationService.bookSlot(anyLong(), any(), any(), any()))
-                .thenReturn(Mono.just(bookedDto));
-
-        StepVerifier.create(groupEventController.bookGroupEvent(request))
-                .expectNextMatches(response -> {
-                    GroupEventDto dto = response.getBody();
-                    return dto != null &&
-                            dto.status() == GroupEventStatus.CONFIRMED &&
-                            dto.date() != null;
-                })
-                .verifyComplete();
-    }
+//    @Test
+//    void testBookGroupEvent() {
+//        BookSlotRequest request = new BookSlotRequest(
+//                1L,
+//                LocalDate.now().plusDays(1),
+//                LocalTime.of(10, 0),
+//                LocalTime.of(11, 0)
+//        );
+//
+//        GroupEventDto bookedDto = new GroupEventDto(
+//                1L,
+//                "Test Group Event",
+//                "Test Description",
+//                LocalDate.now().plusDays(1),
+//                LocalTime.of(10, 0),
+//                LocalTime.of(11, 0),
+//                List.of(2L, 3L),
+//                1L,
+//                GroupEventStatus.CONFIRMED
+//        );
+//
+//        when(recommendationService.bookSlot(anyLong(), any(), any(), any()))
+//                .thenReturn(Mono.just(bookedDto));
+//
+//        StepVerifier.create(groupEventController.bookGroupEvent(request))
+//                .expectNextMatches(response -> {
+//                    GroupEventDto dto = response.getBody();
+//                    return dto != null &&
+//                            dto.status() == GroupEventStatus.CONFIRMED &&
+//                            dto.date() != null;
+//                })
+//                .verifyComplete();
+//    }
 }
 

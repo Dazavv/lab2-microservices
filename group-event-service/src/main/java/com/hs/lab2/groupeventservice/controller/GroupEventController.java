@@ -51,10 +51,10 @@ public class GroupEventController {
                 .map(ResponseEntity::ok);
     }
 
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     @DeleteMapping(path = "/{id}")
-    public Mono<ResponseEntity<Void>> deleteGroupEventById(@PathVariable @Min(1) Long id) {
-        return groupEventService.deleteGroupEventById(id)
-                .then(Mono.just(ResponseEntity.ok().build()));
+    public Mono<Void> deleteGroupEventById(@PathVariable @Min(1) Long id) {
+        return groupEventService.deleteGroupEventById(id).then();
     }
 
     @PostMapping(path = "/recommend")
@@ -67,10 +67,11 @@ public class GroupEventController {
         );
     }
 
+    @ResponseStatus(HttpStatus.OK)
     @PostMapping("/book")
-    public Mono<ResponseEntity<GroupEventDto>> bookGroupEvent(@Valid @RequestBody BookSlotRequest req) {
-        return recommendationService.bookSlot(req.groupEventId(), req.date(), req.startTime(), req.endTime())
-                .map(ResponseEntity::ok);
+    public Mono<GroupEventDto> bookGroupEvent(@Valid @RequestBody BookSlotRequest req) {
+        return recommendationService.bookSlot(req.groupEventId(), req.date(), req.startTime(), req.endTime());
+
     }
 
 }

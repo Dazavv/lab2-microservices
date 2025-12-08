@@ -28,11 +28,12 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class RecommendationService {
-    private final GroupEventRepository groupEventRepository;
+    private final GroupEventRepository groupEventRepository; // TODO через сервис или отдельный репозиторий
     private final GroupEventMapper groupEventMapper;
     private final EventClient eventClient;
     private final GroupEventLoader loader;
 
+    @CircuitBreaker(name = "eventService", fallbackMethod = "fetchBusyIntervalsFallback")
     @Transactional
     public Flux<RecommendTimeSlotDto> recommendSlots(LocalDate periodStart, LocalDate periodEnd, Duration duration, Long groupEventId) {
         Mono<List<Long>> participantIdsMono = Mono.fromCallable(
@@ -45,14 +46,11 @@ public class RecommendationService {
         }));
     }
 
-
-    @CircuitBreaker(name = "eventService", fallbackMethod = "fetchBusyIntervalsFallback")
     public Flux<TimeInterval> fetchBusyIntervals(List<Long> participantIds, String start, String end) {
         return eventClient.getBusyEventsForUsersBetweenDates(participantIds, start, end).map(e -> new TimeInterval(e.date(), e.startTime(), e.endTime()));
     }
 
-    @SuppressWarnings("unused")
-    public Flux<TimeInterval> fetchBusyIntervalsFallback(List<Long> participantIds, LocalDate start, LocalDate end, Throwable t) {
+    public Flux<TimeInterval> fetchBusyIntervalsFallback(LocalDate periodStart, LocalDate periodEnd, Duration duration, Long groupEventId, Throwable t) {
         return Flux.error(new EventServiceUnavailableException("Event-service unavailable, try later"));
     }
 
