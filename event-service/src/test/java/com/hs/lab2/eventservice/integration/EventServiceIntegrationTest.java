@@ -95,7 +95,7 @@ class EventServiceIntegrationTest {
                 .uri("/api/v1/event")
                 .bodyValue(createRequest)
                 .exchange()
-                .expectStatus().isOk()
+                .expectStatus().isCreated()
                 .expectBody(EventDto.class)
                 .returnResult()
                 .getResponseBody();
@@ -125,13 +125,13 @@ class EventServiceIntegrationTest {
                 .uri("/api/v1/event")
                 .bodyValue(createRequest)
                 .exchange()
-                .expectStatus().isOk();
+                .expectStatus().isCreated();
 
         webTestClient.post()
                 .uri("/api/v1/event")
                 .bodyValue(request2)
                 .exchange()
-                .expectStatus().isOk();
+                .expectStatus().isCreated();
 
         webTestClient.get()
                 .uri("/api/v1/event")
@@ -147,7 +147,7 @@ class EventServiceIntegrationTest {
                 .uri("/api/v1/event")
                 .bodyValue(createRequest)
                 .exchange()
-                .expectStatus().isOk();
+                .expectStatus().isCreated();
 
         CreateEventRequest overlappingRequest = new CreateEventRequest(
                 "Overlapping Event", "Description", createRequest.date(),
@@ -166,7 +166,7 @@ class EventServiceIntegrationTest {
                 .uri("/api/v1/event")
                 .bodyValue(createRequest)
                 .exchange()
-                .expectStatus().isOk()
+                .expectStatus().isCreated()
                 .expectBody(EventDto.class)
                 .returnResult()
                 .getResponseBody();
@@ -176,7 +176,7 @@ class EventServiceIntegrationTest {
         webTestClient.delete()
                 .uri("/api/v1/event/{id}", createdEvent.id())
                 .exchange()
-                .expectStatus().isOk();
+                .expectStatus().isNoContent();
 
         webTestClient.get()
                 .uri("/api/v1/event/{id}", createdEvent.id())
@@ -190,7 +190,7 @@ class EventServiceIntegrationTest {
                 .uri("/api/v1/event")
                 .bodyValue(createRequest)
                 .exchange()
-                .expectStatus().isOk();
+                .expectStatus().isCreated();
 
         webTestClient.get()
                 .uri(uriBuilder -> uriBuilder.path("/api/v1/event/owner/{id}")
@@ -209,7 +209,7 @@ class EventServiceIntegrationTest {
                 .uri("/api/v1/event")
                 .bodyValue(createRequest)
                 .exchange()
-                .expectStatus().isOk();
+                .expectStatus().isCreated();
 
         webTestClient.get()
                 .uri(uriBuilder -> uriBuilder.path("/api/v1/event/busy")

@@ -17,8 +17,10 @@ import reactor.test.StepVerifier;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,49 +41,69 @@ class EventControllerTest {
 
     @BeforeEach
     void setUp() {
+        LocalDate date = LocalDate.now().plusDays(1);
+        LocalTime start = LocalTime.of(10, 0);
+        LocalTime end = LocalTime.of(11, 0);
+
         testEvent = new Event();
         testEvent.setId(1L);
         testEvent.setName("Test Event");
         testEvent.setDescription("Test Description");
-        testEvent.setDate(LocalDate.now().plusDays(1));
-        testEvent.setStartTime(LocalTime.of(10, 0));
-        testEvent.setEndTime(LocalTime.of(11, 0));
+        testEvent.setDate(date);
+        testEvent.setStartTime(start);
+        testEvent.setEndTime(end);
         testEvent.setOwnerId(1L);
 
         testEventDto = new EventDto(
                 1L,
                 "Test Event",
                 "Test Description",
-                LocalDate.now().plusDays(1),
-                LocalTime.of(10, 0),
-                LocalTime.of(11, 0),
+                date,
+                start,
+                end,
                 1L
         );
 
         createRequest = new CreateEventRequest(
                 "Test Event",
                 "Test Description",
-                LocalDate.now().plusDays(1),
-                LocalTime.of(10, 0),
-                LocalTime.of(11, 0),
+                date,
+                start,
+                end,
                 1L
         );
     }
 
     @Test
     void testAddEvent() {
-        when(eventService.addEvent(anyString(), anyString(), any(), any(), any(), anyLong()))
-                .thenReturn(Mono.just(testEvent));
+        when(eventService.addEvent(
+                anyString(),
+                anyString(),
+                any(LocalDate.class),
+                any(LocalTime.class),
+                any(LocalTime.class),
+                anyLong()
+        )).thenReturn(Mono.just(testEvent));
         when(eventMapper.toEventDto(testEvent)).thenReturn(testEventDto);
 
         StepVerifier.create(eventController.addEvent(createRequest))
-                .expectNextMatches(response -> {
-                    EventDto dto = response.getBody();
-                    return dto != null &&
-                            dto.id().equals(1L) &&
-                            dto.name().equals("Test Event");
-                })
+                .expectNextMatches(dto ->
+                        dto != null &&
+                                dto.id().equals(1L) &&
+                                dto.name().equals("Test Event") &&
+                                dto.description().equals("Test Description")
+                )
                 .verifyComplete();
+
+        verify(eventService).addEvent(
+                eq(createRequest.name()),
+                eq(createRequest.description()),
+                eq(createRequest.date()),
+                eq(createRequest.startTime()),
+                eq(createRequest.endTime()),
+                eq(createRequest.ownerId())
+        );
+        verify(eventMapper).toEventDto(testEvent);
     }
 
     @Test
@@ -90,7 +112,15 @@ class EventControllerTest {
         event2.setId(2L);
         event2.setName("Event 2");
 
-        EventDto dto2 = new EventDto(2L, "Event 2", null, null, null, null, null);
+        EventDto dto2 = new EventDto(
+                2L,
+                "Event 2",
+                null,
+                null,
+                null,
+                null,
+                null
+        );
 
         when(eventService.getAllEvents()).thenReturn(Flux.just(testEvent, event2));
         when(eventMapper.toEventDto(testEvent)).thenReturn(testEventDto);
@@ -100,6 +130,10 @@ class EventControllerTest {
                 .expectNext(testEventDto)
                 .expectNext(dto2)
                 .verifyComplete();
+
+        verify(eventService).getAllEvents();
+        verify(eventMapper).toEventDto(testEvent);
+        verify(eventMapper).toEventDto(event2);
     }
 
     @Test
@@ -108,11 +142,15 @@ class EventControllerTest {
         when(eventMapper.toEventDto(testEvent)).thenReturn(testEventDto);
 
         StepVerifier.create(eventController.getEventById(1L))
-                .expectNextMatches(response -> {
-                    EventDto dto = response.getBody();
-                    return dto != null && dto.id().equals(1L);
-                })
+                .expectNextMatches(dto ->
+                        dto != null &&
+                                dto.id().equals(1L) &&
+                                dto.name().equals("Test Event")
+                )
                 .verifyComplete();
+
+        verify(eventService).getEventById(1L);
+        verify(eventMapper).toEventDto(testEvent);
     }
 
     @Test
@@ -123,6 +161,8 @@ class EventControllerTest {
         StepVerifier.create(eventController.getUserEvents(1L, 0, 10))
                 .expectNext(testEvent)
                 .verifyComplete();
+
+        verify(eventService).getUserEventsById(eq(1L), any());
     }
 
     @Test
@@ -130,22 +170,29 @@ class EventControllerTest {
         when(eventService.deleteEventById(1L)).thenReturn(Mono.empty());
 
         StepVerifier.create(eventController.deleteEventById(1L))
-                .expectNextMatches(response -> response.getStatusCode().is2xxSuccessful())
                 .verifyComplete();
+
+        verify(eventService).deleteEventById(1L);
     }
 
     @Test
     void testGetBusyEventsForUsersBetweenDates() {
-        when(eventService.getBusyEventsForUsersBetweenDates(anyList(), any(), any()))
+        LocalDate start = LocalDate.now();
+        LocalDate end = LocalDate.now().plusDays(7);
+
+        when(eventService.getBusyEventsForUsersBetweenDates(anyList(), any(LocalDate.class), any(LocalDate.class)))
                 .thenReturn(Flux.just(testEvent));
         when(eventMapper.toEventDto(testEvent)).thenReturn(testEventDto);
 
         StepVerifier.create(eventController.getBusyEventsForUsersBetweenDates(
-                java.util.List.of(1L, 2L),
-                LocalDate.now(),
-                LocalDate.now().plusDays(7)))
+                        List.of(1L, 2L),
+                        start,
+                        end
+                ))
                 .expectNext(testEventDto)
                 .verifyComplete();
+
+        verify(eventService).getBusyEventsForUsersBetweenDates(eq(List.of(1L, 2L)), eq(start), eq(end));
+        verify(eventMapper).toEventDto(testEvent);
     }
 }
-

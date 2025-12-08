@@ -4,13 +4,10 @@ import com.hs.lab2.groupeventservice.client.EventClient;
 import com.hs.lab2.groupeventservice.dto.responses.GroupEventDto;
 import com.hs.lab2.groupeventservice.dto.responses.RecommendTimeSlotDto;
 import com.hs.lab2.groupeventservice.dto.responses.TimeInterval;
-import com.hs.lab2.groupeventservice.entity.GroupEvent;
 import com.hs.lab2.groupeventservice.enums.GroupEventStatus;
-import com.hs.lab2.groupeventservice.exceptions.EventNotFoundException;
 import com.hs.lab2.groupeventservice.exceptions.EventServiceUnavailableException;
 import com.hs.lab2.groupeventservice.exceptions.NoAvailableSlotsException;
 import com.hs.lab2.groupeventservice.mapper.GroupEventMapper;
-import com.hs.lab2.groupeventservice.repository.GroupEventRepository;
 import com.hs.lab2.groupeventservice.util.SlotCalculator;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import jakarta.transaction.Transactional;
@@ -28,7 +25,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class RecommendationService {
-    private final GroupEventRepository groupEventRepository; // TODO через сервис или отдельный репозиторий
+    private final GroupEventService groupEventService;
     private final GroupEventMapper groupEventMapper;
     private final EventClient eventClient;
     private final GroupEventLoader loader;
@@ -56,18 +53,14 @@ public class RecommendationService {
 
     @Transactional
     public Mono<GroupEventDto> bookSlot(Long id, LocalDate date, LocalTime startTime, LocalTime endTime) {
-        return Mono.fromCallable(() -> {
-            GroupEvent ge = groupEventRepository.findByIdWithParticipants(id)
-                    .orElseThrow(() -> new EventNotFoundException("GroupEvent not found: " + id));
-
-            ge.setDate(date);
-            ge.setStartTime(startTime);
-            ge.setEndTime(endTime);
-            ge.setStatus(GroupEventStatus.CONFIRMED);
-
-            groupEventRepository.save(ge);
-
-            return groupEventMapper.toGroupEventDto(ge);
-        }).subscribeOn(Schedulers.boundedElastic());
+        return groupEventService.getGroupEventById(id)
+                .flatMap(ge -> {
+                    ge.setDate(date);
+                    ge.setStartTime(startTime);
+                    ge.setEndTime(endTime);
+                    ge.setStatus(GroupEventStatus.CONFIRMED);
+                    return groupEventService.saveGroupEvent(ge);
+                })
+                .map(groupEventMapper::toGroupEventDto);
     }
 }

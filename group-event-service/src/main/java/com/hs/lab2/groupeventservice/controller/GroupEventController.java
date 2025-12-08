@@ -12,31 +12,30 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
-@RequestMapping("/api/v1/groupEvent")
+@RequestMapping("/api/v1/group-event")
 @RequiredArgsConstructor
 public class GroupEventController {
+
     private final GroupEventService groupEventService;
     private final GroupEventMapper groupEventMapper;
     private final RecommendationService recommendationService;
 
+    @ResponseStatus(HttpStatus.CREATED)
     @PostMapping
-    public Mono<ResponseEntity<GroupEventDto>> addGroupEvent(@RequestBody CreateGroupEventRequest request) {
+    public Mono<GroupEventDto> addGroupEvent(@RequestBody CreateGroupEventRequest request) {
         return groupEventService.addGroupEvent(
                         request.name(),
                         request.description(),
                         request.participantIds(),
                         request.ownerId()
                 )
-                .map(groupEventMapper::toGroupEventDto)
-                .map(dto -> ResponseEntity.status(HttpStatus.CREATED).body(dto));
+                .map(groupEventMapper::toGroupEventDto);
     }
-
 
     @GetMapping
     public Flux<GroupEventDto> getAllGroupEvents() {
@@ -44,20 +43,19 @@ public class GroupEventController {
                 .map(groupEventMapper::toGroupEventDto);
     }
 
-    @GetMapping(path = "/{id}")
-    public Mono<ResponseEntity<GroupEventDto>> getGroupEventById(@PathVariable @Min(1) Long id) {
+    @GetMapping("/{id}")
+    public Mono<GroupEventDto> getGroupEventById(@PathVariable @Min(1) Long id) {
         return groupEventService.getGroupEventById(id)
-                .map(groupEventMapper::toGroupEventDto)
-                .map(ResponseEntity::ok);
+                .map(groupEventMapper::toGroupEventDto);
     }
 
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @DeleteMapping(path = "/{id}")
+    @DeleteMapping("/{id}")
     public Mono<Void> deleteGroupEventById(@PathVariable @Min(1) Long id) {
         return groupEventService.deleteGroupEventById(id).then();
     }
 
-    @PostMapping(path = "/recommend")
+    @PostMapping("/recommend")
     public Flux<RecommendTimeSlotDto> recommendGroupEvents(@RequestBody RecommendSlotsRequest request) {
         return recommendationService.recommendSlots(
                 request.periodStart(),
@@ -70,8 +68,11 @@ public class GroupEventController {
     @ResponseStatus(HttpStatus.OK)
     @PostMapping("/book")
     public Mono<GroupEventDto> bookGroupEvent(@Valid @RequestBody BookSlotRequest req) {
-        return recommendationService.bookSlot(req.groupEventId(), req.date(), req.startTime(), req.endTime());
-
+        return recommendationService.bookSlot(
+                req.groupEventId(),
+                req.date(),
+                req.startTime(),
+                req.endTime()
+        );
     }
-
 }

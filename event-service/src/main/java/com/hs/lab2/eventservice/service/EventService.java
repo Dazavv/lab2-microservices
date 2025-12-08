@@ -1,15 +1,9 @@
 package com.hs.lab2.eventservice.service;
 
-import com.hs.lab2.eventservice.client.UserClient;
-import com.hs.lab2.eventservice.dto.responses.UserDto;
 import com.hs.lab2.eventservice.entity.Event;
 import com.hs.lab2.eventservice.exceptions.EventConflictException;
 import com.hs.lab2.eventservice.exceptions.EventNotFoundException;
-import com.hs.lab2.eventservice.exceptions.UserNotFoundException;
-import com.hs.lab2.eventservice.exceptions.UserServiceUnavailableException;
 import com.hs.lab2.eventservice.repository.EventRepository;
-import feign.FeignException;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -26,13 +20,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class EventService {
     private final EventRepository eventRepository;
-    private final UserClient userClient;
+    private final UserClientService userClientService;
 
     public Flux<Event> getAllEvents() {
         return eventRepository.findAll();
     }
 
-    @CircuitBreaker(name = "userService", fallbackMethod = "userFallback")
     public Mono<Event> addEvent(String name,
                                 String description,
                                 LocalDate date,
@@ -43,7 +36,7 @@ public class EventService {
             return Mono.error(new EventConflictException("Invalid event time"));
         }
 
-        return getUserByIdWithCircuitBreaker(ownerId)
+        return userClientService.getUserById(ownerId)
                 .flatMap(user ->
                         eventRepository.existsByOwnerAndDateAndTimeOverlap(ownerId, date, startTime, endTime)
                                 .flatMap(conflict -> {
@@ -61,16 +54,6 @@ public class EventService {
                 );
     }
 
-    private Mono<UserDto> getUserByIdWithCircuitBreaker(Long ownerId) {
-        return userClient.getUserById(ownerId)
-                .onErrorResume(FeignException.NotFound.class, e ->
-                        Mono.error(new UserNotFoundException("User with id = " + ownerId + " not found"))
-                )
-                .onErrorResume(FeignException.class, e ->
-                        Mono.error(new RuntimeException("User-service error: " + e.status() + " " + e.getMessage()))
-                );
-    }
-
     public Mono<Event> getEventById(Long id) {
         return eventRepository.findById(id)
                 .switchIfEmpty(Mono.error(new EventNotFoundException("Event with id = " + id + " not found")));
@@ -81,20 +64,11 @@ public class EventService {
                 .switchIfEmpty(Mono.error(new EventNotFoundException("Event with id = " + id + " not found")))
                 .flatMap(event -> eventRepository.deleteById(event.getId()));
     }
+
     public Flux<Event> getBusyEventsForUsersBetweenDates(List<Long> userIds,
                                                          LocalDate startDate,
                                                          LocalDate endDate) {
         return eventRepository.findBusyEventsForUsersBetweenDates(userIds, startDate, endDate);
-    }
-
-    public Mono<Event> userFallback(String name,
-                                    String description,
-                                    LocalDate date,
-                                    LocalTime startTime,
-                                    LocalTime endTime,
-                                    Long ownerId,
-                                    Throwable t) {
-        return Mono.error(new UserServiceUnavailableException("User-service unavailable, try later"));
     }
 
     public Flux<Event> getUserEventsById(Long ownerId, Pageable pageable) {

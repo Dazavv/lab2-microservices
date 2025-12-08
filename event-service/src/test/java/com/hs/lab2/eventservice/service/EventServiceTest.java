@@ -1,13 +1,11 @@
 package com.hs.lab2.eventservice.service;
 
-import com.hs.lab2.eventservice.client.UserClient;
 import com.hs.lab2.eventservice.dto.responses.UserDto;
 import com.hs.lab2.eventservice.entity.Event;
 import com.hs.lab2.eventservice.exceptions.EventConflictException;
 import com.hs.lab2.eventservice.exceptions.EventNotFoundException;
 import com.hs.lab2.eventservice.exceptions.UserNotFoundException;
 import com.hs.lab2.eventservice.repository.EventRepository;
-import feign.FeignException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,7 +32,7 @@ class EventServiceTest {
     private EventRepository eventRepository;
 
     @Mock
-    private UserClient userClient;
+    private UserClientService userClientService;
 
     @InjectMocks
     private EventService eventService;
@@ -74,20 +72,24 @@ class EventServiceTest {
                 .expectNext(testEvent)
                 .expectNext(event2)
                 .verifyComplete();
+
+        verify(eventRepository).findAll();
     }
 
     @Test
     void testAddEvent_Success() {
-        when(userClient.getUserById(1L)).thenReturn(Mono.just(testUser));
+        when(userClientService.getUserById(1L)).thenReturn(Mono.just(testUser));
         when(eventRepository.existsByOwnerAndDateAndTimeOverlap(anyLong(), any(), any(), any()))
                 .thenReturn(Mono.just(false));
         when(eventRepository.save(any(Event.class))).thenReturn(Mono.just(testEvent));
 
         StepVerifier.create(eventService.addEvent(
-                "Test Event", "Description", tomorrow, startTime, endTime, 1L))
+                        "Test Event", "Description", tomorrow, startTime, endTime, 1L))
                 .expectNextMatches(event -> event.getName().equals("Test Event"))
                 .verifyComplete();
 
+        verify(userClientService).getUserById(1L);
+        verify(eventRepository).existsByOwnerAndDateAndTimeOverlap(1L, tomorrow, startTime, endTime);
         verify(eventRepository).save(any(Event.class));
     }
 
@@ -96,10 +98,11 @@ class EventServiceTest {
         LocalTime invalidEndTime = LocalTime.of(9, 0);
 
         StepVerifier.create(eventService.addEvent(
-                "Test Event", "Description", tomorrow, startTime, invalidEndTime, 1L))
+                        "Test Event", "Description", tomorrow, startTime, invalidEndTime, 1L))
                 .expectError(EventConflictException.class)
                 .verify();
 
+        verifyNoInteractions(userClientService);
         verify(eventRepository, never()).save(any(Event.class));
     }
 
@@ -108,47 +111,52 @@ class EventServiceTest {
         LocalDate pastDate = LocalDate.now().minusDays(1);
 
         StepVerifier.create(eventService.addEvent(
-                "Test Event", "Description", pastDate, startTime, endTime, 1L))
+                        "Test Event", "Description", pastDate, startTime, endTime, 1L))
                 .expectError(EventConflictException.class)
                 .verify();
 
+        verifyNoInteractions(userClientService);
         verify(eventRepository, never()).save(any(Event.class));
     }
 
     @Test
     void testAddEvent_InvalidTime_EqualTimes() {
         StepVerifier.create(eventService.addEvent(
-                "Test Event", "Description", tomorrow, startTime, startTime, 1L))
+                        "Test Event", "Description", tomorrow, startTime, startTime, 1L))
                 .expectError(EventConflictException.class)
                 .verify();
 
+        verifyNoInteractions(userClientService);
         verify(eventRepository, never()).save(any(Event.class));
     }
 
     @Test
     void testAddEvent_TimeConflict() {
-        when(userClient.getUserById(1L)).thenReturn(Mono.just(testUser));
+        when(userClientService.getUserById(1L)).thenReturn(Mono.just(testUser));
         when(eventRepository.existsByOwnerAndDateAndTimeOverlap(anyLong(), any(), any(), any()))
                 .thenReturn(Mono.just(true));
 
         StepVerifier.create(eventService.addEvent(
-                "Test Event", "Description", tomorrow, startTime, endTime, 1L))
+                        "Test Event", "Description", tomorrow, startTime, endTime, 1L))
                 .expectError(EventConflictException.class)
                 .verify();
 
+        verify(userClientService).getUserById(1L);
+        verify(eventRepository).existsByOwnerAndDateAndTimeOverlap(1L, tomorrow, startTime, endTime);
         verify(eventRepository, never()).save(any(Event.class));
     }
 
     @Test
     void testAddEvent_UserNotFound() {
-        FeignException.NotFound notFound = mock(FeignException.NotFound.class);
-        when(userClient.getUserById(1L)).thenReturn(Mono.error(notFound));
+        when(userClientService.getUserById(1L))
+                .thenReturn(Mono.error(new UserNotFoundException("User not found")));
 
         StepVerifier.create(eventService.addEvent(
-                "Test Event", "Description", tomorrow, startTime, endTime, 1L))
+                        "Test Event", "Description", tomorrow, startTime, endTime, 1L))
                 .expectError(UserNotFoundException.class)
                 .verify();
 
+        verify(userClientService).getUserById(1L);
         verify(eventRepository, never()).save(any(Event.class));
     }
 
@@ -159,6 +167,8 @@ class EventServiceTest {
         StepVerifier.create(eventService.getEventById(1L))
                 .expectNext(testEvent)
                 .verifyComplete();
+
+        verify(eventRepository).findById(1L);
     }
 
     @Test
@@ -168,6 +178,8 @@ class EventServiceTest {
         StepVerifier.create(eventService.getEventById(1L))
                 .expectError(EventNotFoundException.class)
                 .verify();
+
+        verify(eventRepository).findById(1L);
     }
 
     @Test
@@ -178,6 +190,7 @@ class EventServiceTest {
         StepVerifier.create(eventService.deleteEventById(1L))
                 .verifyComplete();
 
+        verify(eventRepository).findById(1L);
         verify(eventRepository).deleteById(1L);
     }
 
@@ -189,6 +202,7 @@ class EventServiceTest {
                 .expectError(EventNotFoundException.class)
                 .verify();
 
+        verify(eventRepository).findById(1L);
         verify(eventRepository, never()).deleteById(anyLong());
     }
 
@@ -201,10 +215,13 @@ class EventServiceTest {
                 .thenReturn(Flux.just(testEvent, event2));
 
         StepVerifier.create(eventService.getBusyEventsForUsersBetweenDates(
-                List.of(1L, 2L), tomorrow, tomorrow.plusDays(7)))
+                        List.of(1L, 2L), tomorrow, tomorrow.plusDays(7)))
                 .expectNext(testEvent)
                 .expectNext(event2)
                 .verifyComplete();
+
+        verify(eventRepository).findBusyEventsForUsersBetweenDates(
+                eq(List.of(1L, 2L)), eq(tomorrow), eq(tomorrow.plusDays(7)));
     }
 
     @Test
@@ -216,6 +233,8 @@ class EventServiceTest {
         StepVerifier.create(eventService.getUserEventsById(1L, pageable))
                 .expectNext(testEvent)
                 .verifyComplete();
+
+        verify(eventRepository).findByOwnerIdPaged(1L, 10L, 0L);
     }
 
     @Test
@@ -226,8 +245,14 @@ class EventServiceTest {
                 .thenReturn(Flux.just(testEvent));
 
         StepVerifier.create(eventService.getUserEventsPage(1L, pageable))
-                .expectNextMatches(page -> page.getTotalElements() == 1 && page.getContent().size() == 1)
+                .expectNextMatches(page ->
+                        page.getTotalElements() == 1 &&
+                                page.getContent().size() == 1 &&
+                                page.getContent().get(0).getId().equals(1L)
+                )
                 .verifyComplete();
+
+        verify(eventRepository).countByOwnerId(1L);
+        verify(eventRepository).findByOwnerIdPaged(1L, 10L, 0L);
     }
 }
-

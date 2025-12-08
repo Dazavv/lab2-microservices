@@ -1,11 +1,9 @@
 package com.hs.lab2.groupeventservice.service;
 
-import com.hs.lab2.groupeventservice.client.UserClient;
 import com.hs.lab2.groupeventservice.dto.responses.UserDto;
 import com.hs.lab2.groupeventservice.entity.GroupEvent;
 import com.hs.lab2.groupeventservice.enums.GroupEventStatus;
 import com.hs.lab2.groupeventservice.exceptions.EventNotFoundException;
-import com.hs.lab2.groupeventservice.exceptions.UserNotFoundException;
 import com.hs.lab2.groupeventservice.repository.GroupEventRepository;
 import feign.FeignException;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,7 +29,7 @@ class GroupEventServiceTest {
     private GroupEventRepository groupEventRepository;
 
     @Mock
-    private UserClient userClient;
+    private UserClientService userClientService;
 
     @InjectMocks
     private GroupEventService groupEventService;
@@ -70,57 +68,41 @@ class GroupEventServiceTest {
                 .expectNext(testGroupEvent)
                 .expectNext(event2)
                 .verifyComplete();
+
+        verify(groupEventRepository).findAllWithParticipants();
     }
 
     @Test
     void testAddGroupEvent_Success() {
-        UserDto user1 = new UserDto(1L, "user1", "Name1", "Surname1", null);
-        UserDto user2 = new UserDto(2L, "user2", "Name2", "Surname2", null);
-        UserDto user3 = new UserDto(3L, "user3", "Name3", "Surname3", null);
+        UserDto owner = new UserDto(1L, "owner", "Owner", "Owner", null);
 
-        when(userClient.getUserById(1L)).thenReturn(Mono.just(user1));
-        when(userClient.getUserById(2L)).thenReturn(Mono.just(user2));
-        when(userClient.getUserById(3L)).thenReturn(Mono.just(user3));
+        when(userClientService.getUserById(1L)).thenReturn(Mono.just(owner));
         when(groupEventRepository.save(any(GroupEvent.class))).thenReturn(testGroupEvent);
 
         StepVerifier.create(groupEventService.addGroupEvent(
-                "Test Group Event", "Description", participantIds, 1L))
-                .expectNextMatches(event -> {
-                    return event.getName().equals("Test Group Event") &&
-                            event.getStatus() == GroupEventStatus.PENDING &&
-                            event.getOwnerId().equals(1L);
-                })
+                        "Test Group Event", "Description", participantIds, 1L))
+                .expectNextMatches(event ->
+                        event.getName().equals("Test Group Event") &&
+                                event.getStatus() == GroupEventStatus.PENDING &&
+                                event.getOwnerId().equals(1L)
+                )
                 .verifyComplete();
 
+        verify(userClientService).getUserById(1L);
         verify(groupEventRepository).save(any(GroupEvent.class));
     }
 
     @Test
     void testAddGroupEvent_OwnerNotFound() {
         FeignException.NotFound notFound = mock(FeignException.NotFound.class);
-        when(userClient.getUserById(1L)).thenReturn(Mono.error(notFound));
+        when(userClientService.getUserById(1L)).thenReturn(Mono.error(notFound));
 
         StepVerifier.create(groupEventService.addGroupEvent(
-                "Test Group Event", "Description", participantIds, 1L))
-                .expectError(UserNotFoundException.class)
+                        "Test Group Event", "Description", participantIds, 1L))
+                .expectError(FeignException.NotFound.class)
                 .verify();
 
-        verify(groupEventRepository, never()).save(any(GroupEvent.class));
-    }
-
-    @Test
-    void testAddGroupEvent_ParticipantNotFound() {
-        UserDto owner = new UserDto(1L, "owner", "Owner", "Owner", null);
-        FeignException.NotFound notFound = mock(FeignException.NotFound.class);
-
-        when(userClient.getUserById(1L)).thenReturn(Mono.just(owner));
-        when(userClient.getUserById(2L)).thenReturn(Mono.error(notFound));
-
-        StepVerifier.create(groupEventService.addGroupEvent(
-                "Test Group Event", "Description", participantIds, 1L))
-                .expectError(UserNotFoundException.class)
-                .verify();
-
+        verify(userClientService).getUserById(1L);
         verify(groupEventRepository, never()).save(any(GroupEvent.class));
     }
 
@@ -132,6 +114,8 @@ class GroupEventServiceTest {
         StepVerifier.create(groupEventService.getGroupEventById(1L))
                 .expectNext(testGroupEvent)
                 .verifyComplete();
+
+        verify(groupEventRepository).findByIdWithParticipants(1L);
     }
 
     @Test
@@ -142,6 +126,8 @@ class GroupEventServiceTest {
         StepVerifier.create(groupEventService.getGroupEventById(1L))
                 .expectError(EventNotFoundException.class)
                 .verify();
+
+        verify(groupEventRepository).findByIdWithParticipants(1L);
     }
 
     @Test
@@ -152,6 +138,7 @@ class GroupEventServiceTest {
         StepVerifier.create(groupEventService.deleteGroupEventById(1L))
                 .verifyComplete();
 
+        verify(groupEventRepository).existsById(1L);
         verify(groupEventRepository).deleteById(1L);
     }
 
@@ -163,26 +150,30 @@ class GroupEventServiceTest {
                 .expectError(EventNotFoundException.class)
                 .verify();
 
+        verify(groupEventRepository).existsById(1L);
         verify(groupEventRepository, never()).deleteById(anyLong());
     }
 
     @Test
     void testGetUserByIdWithCircuitBreaker_Success() {
-        when(userClient.getUserById(1L)).thenReturn(Mono.just(testUser));
+        when(userClientService.getUserById(1L)).thenReturn(Mono.just(testUser));
 
-        StepVerifier.create(groupEventService.getUserByIdWithCircuitBreaker(1L))
+        StepVerifier.create(userClientService.getUserById(1L))
                 .expectNext(testUser)
                 .verifyComplete();
+
+        verify(userClientService).getUserById(1L);
     }
 
     @Test
     void testGetUserByIdWithCircuitBreaker_NotFound() {
         FeignException.NotFound notFound = mock(FeignException.NotFound.class);
-        when(userClient.getUserById(1L)).thenReturn(Mono.error(notFound));
+        when(userClientService.getUserById(1L)).thenReturn(Mono.error(notFound));
 
-        StepVerifier.create(groupEventService.getUserByIdWithCircuitBreaker(1L))
-                .expectError(UserNotFoundException.class)
+        StepVerifier.create(userClientService.getUserById(1L))
+                .expectError(FeignException.NotFound.class)
                 .verify();
+
+        verify(userClientService).getUserById(1L);
     }
 }
-

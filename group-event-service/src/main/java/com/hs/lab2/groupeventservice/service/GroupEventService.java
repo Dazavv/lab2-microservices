@@ -23,7 +23,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class GroupEventService {
     private final GroupEventRepository groupEventRepository;
-    private final UserClient userClient;
+    private final UserClientService userClientService;
 
     public Flux<GroupEvent> getAllGroupEvents() {
         return Mono.fromCallable(groupEventRepository::findAllWithParticipants).subscribeOn(Schedulers.boundedElastic()).flatMapMany(Flux::fromIterable);
@@ -35,33 +35,26 @@ public class GroupEventService {
                                           List<Long> participantsIds,
                                           Long ownerId
     ) {
-        return getUserByIdWithCircuitBreaker(ownerId)
+        return userClientService.getUserById(ownerId)
                 .flatMap(owner ->
-                        Flux.fromIterable(participantsIds)
-                                .flatMap(this::getUserByIdWithCircuitBreaker
-                                )
-                                .collectList()
-                                .flatMap(participants ->
-                                        Mono.fromCallable(() -> {
-                                            GroupEvent groupEvent = GroupEvent.builder()
-                                                    .name(name)
-                                                    .description(description)
-                                                    .participantIds(participantsIds)
-                                                    .ownerId(ownerId)
-                                                    .status(GroupEventStatus.PENDING)
-                                                    .build();
+                                Flux.fromIterable(participantsIds)
+//                                .flatMap(userClientService::getUserById, 1)
+//                                .map(UserDto::id)
+                                        .collectList()
+                                        .flatMap(participants ->
+                                                Mono.fromCallable(() -> {
+                                                    GroupEvent groupEvent = GroupEvent.builder()
+                                                            .name(name)
+                                                            .description(description)
+                                                            .participantIds(participantsIds)
+                                                            .ownerId(ownerId)
+                                                            .status(GroupEventStatus.PENDING)
+                                                            .build();
 
-                                            return groupEventRepository.save(groupEvent);
-                                        }).subscribeOn(Schedulers.boundedElastic())
-                                )
+                                                    return groupEventRepository.save(groupEvent);
+                                                }).subscribeOn(Schedulers.boundedElastic())
+                                        )
                 );
-    }
-
-    @CircuitBreaker(name = "userService", fallbackMethod = "userFallback")
-    public Mono<UserDto> getUserByIdWithCircuitBreaker(Long ownerId) {
-        return userClient.getUserById(ownerId)
-                .onErrorResume(FeignException.NotFound.class, e -> Mono.error(new UserNotFoundException("User with id = " + ownerId + " not found")))
-                .onErrorResume(FeignException.class, e -> Mono.error(new RuntimeException("User-service error: " + e.status() + " " + e.getMessage())));
     }
 
     public Mono<GroupEvent> getGroupEventById(Long id) {
@@ -78,8 +71,10 @@ public class GroupEventService {
         }).subscribeOn(Schedulers.boundedElastic()).then();
     }
 
-    public Mono<UserDto> userFallback(Long ownerId, Throwable t) {
-        return Mono.error(new UserServiceUnavailableException("User-service unavailable, try later"));
+    @Transactional
+    public Mono<GroupEvent> saveGroupEvent(GroupEvent groupEvent) {
+        return Mono.fromCallable(() -> groupEventRepository.save(groupEvent))
+                .subscribeOn(Schedulers.boundedElastic());
     }
 }
 

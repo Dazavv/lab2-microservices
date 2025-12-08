@@ -11,7 +11,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -23,20 +22,22 @@ import java.util.List;
 @RequestMapping("/api/v1/event")
 @RequiredArgsConstructor
 public class EventController {
+
     private final EventService eventService;
     private final EventMapper eventMapper;
 
+    @ResponseStatus(org.springframework.http.HttpStatus.CREATED)
     @PostMapping
-    public Mono<ResponseEntity<EventDto>> addEvent(@Valid @RequestBody CreateEventRequest request) {
-        Mono<Event> event = eventService.addEvent(
-                request.name(),
-                request.description(),
-                request.date(),
-                request.startTime(),
-                request.endTime(),
-                request.ownerId());
-        return event.map(eventMapper::toEventDto)
-                .map(ResponseEntity::ok);
+    public Mono<EventDto> addEvent(@Valid @RequestBody CreateEventRequest request) {
+        return eventService.addEvent(
+                        request.name(),
+                        request.description(),
+                        request.date(),
+                        request.startTime(),
+                        request.endTime(),
+                        request.ownerId()
+                )
+                .map(eventMapper::toEventDto);
     }
 
     @GetMapping
@@ -45,11 +46,10 @@ public class EventController {
                 .map(eventMapper::toEventDto);
     }
 
-    @GetMapping(path = "/{id}")
-    public Mono<ResponseEntity<EventDto>> getEventById(@PathVariable @Min(1) Long id) {
+    @GetMapping("/{id}")
+    public Mono<EventDto> getEventById(@PathVariable @Min(1) Long id) {
         return eventService.getEventById(id)
-                .map(eventMapper::toEventDto)
-                .map(ResponseEntity::ok);
+                .map(eventMapper::toEventDto);
     }
 
     @GetMapping("/owner/{id}")
@@ -62,18 +62,18 @@ public class EventController {
         return eventService.getUserEventsById(id, pageable);
     }
 
-    @DeleteMapping(path = "/{id}")
-    public Mono<ResponseEntity<Void>> deleteEventById(@PathVariable @Min(1) Long id) {
-        return eventService.deleteEventById(id)
-                .then(Mono.just(ResponseEntity.ok().build()));
+    @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
+    @DeleteMapping("/{id}")
+    public Mono<Void> deleteEventById(@PathVariable @Min(1) Long id) {
+        return eventService.deleteEventById(id).then();
     }
 
     @GetMapping("/busy")
     public Flux<EventDto> getBusyEventsForUsersBetweenDates(
             @RequestParam List<Long> userIds,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
         return eventService.getBusyEventsForUsersBetweenDates(userIds, startDate, endDate)
                 .map(eventMapper::toEventDto);
     }

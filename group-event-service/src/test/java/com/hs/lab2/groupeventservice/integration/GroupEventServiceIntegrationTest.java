@@ -100,7 +100,7 @@ class GroupEventServiceIntegrationTest {
     @Test
     void testCreateAndGetGroupEvent() {
         GroupEventDto createdEvent = webTestClient.post()
-                .uri("/api/v1/groupEvent")
+                .uri("/api/v1/group-event")
                 .bodyValue(createRequest)
                 .exchange()
                 .expectStatus().isCreated()
@@ -115,7 +115,7 @@ class GroupEventServiceIntegrationTest {
         Assertions.assertThat(createdEvent.status()).isEqualTo(GroupEventStatus.PENDING);
 
         webTestClient.get()
-                .uri("/api/v1/groupEvent/{id}", createdEvent.id())
+                .uri("/api/v1/group-event/{id}", createdEvent.id())
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(GroupEventDto.class)
@@ -131,19 +131,19 @@ class GroupEventServiceIntegrationTest {
                 "Event 2", "Description", List.of(2L), 1L);
 
         webTestClient.post()
-                .uri("/api/v1/groupEvent")
+                .uri("/api/v1/group-event")
                 .bodyValue(createRequest)
                 .exchange()
                 .expectStatus().isCreated();
 
         webTestClient.post()
-                .uri("/api/v1/groupEvent")
+                .uri("/api/v1/group-event")
                 .bodyValue(request2)
                 .exchange()
                 .expectStatus().isCreated();
 
         webTestClient.get()
-                .uri("/api/v1/groupEvent")
+                .uri("/api/v1/group-event")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBodyList(GroupEventDto.class)
@@ -153,7 +153,7 @@ class GroupEventServiceIntegrationTest {
     @Test
     void testDeleteGroupEvent() {
         GroupEventDto createdEvent = webTestClient.post()
-                .uri("/api/v1/groupEvent")
+                .uri("/api/v1/group-event")
                 .bodyValue(createRequest)
                 .exchange()
                 .expectStatus().isCreated()
@@ -164,12 +164,12 @@ class GroupEventServiceIntegrationTest {
         Assertions.assertThat(createdEvent).isNotNull();
 
         webTestClient.delete()
-                .uri("/api/v1/groupEvent/{id}", createdEvent.id())
+                .uri("/api/v1/group-event/{id}", createdEvent.id())
                 .exchange()
-                .expectStatus().isOk();
+                .expectStatus().isNoContent();
 
         webTestClient.get()
-                .uri("/api/v1/groupEvent/{id}", createdEvent.id())
+                .uri("/api/v1/group-event/{id}", createdEvent.id())
                 .exchange()
                 .expectStatus().isNotFound();
     }
@@ -177,7 +177,7 @@ class GroupEventServiceIntegrationTest {
     @Test
     void testRecommendSlots() {
         GroupEventDto createdEvent = webTestClient.post()
-                .uri("/api/v1/groupEvent")
+                .uri("/api/v1/group-event")
                 .bodyValue(createRequest)
                 .exchange()
                 .expectStatus().isCreated()
@@ -195,7 +195,7 @@ class GroupEventServiceIntegrationTest {
         );
 
         webTestClient.post()
-                .uri("/api/v1/groupEvent/recommend")
+                .uri("/api/v1/group-event/recommend")
                 .bodyValue(recommendRequest)
                 .exchange()
                 .expectStatus().isOk()
@@ -205,7 +205,7 @@ class GroupEventServiceIntegrationTest {
     @Test
     void testBookSlot() {
         GroupEventDto createdEvent = webTestClient.post()
-                .uri("/api/v1/groupEvent")
+                .uri("/api/v1/group-event")
                 .bodyValue(createRequest)
                 .exchange()
                 .expectStatus().isCreated()
@@ -223,7 +223,7 @@ class GroupEventServiceIntegrationTest {
         );
 
         webTestClient.post()
-                .uri("/api/v1/groupEvent/book")
+                .uri("/api/v1/group-event/book")
                 .bodyValue(bookRequest)
                 .exchange()
                 .expectStatus().isOk()
@@ -244,7 +244,7 @@ class GroupEventServiceIntegrationTest {
                 "Invalid Event", "Description", List.of(2L), 999L);
 
         webTestClient.post()
-                .uri("/api/v1/groupEvent")
+                .uri("/api/v1/group-event")
                 .bodyValue(invalidRequest)
                 .exchange()
                 .expectStatus().is5xxServerError();
@@ -254,7 +254,7 @@ class GroupEventServiceIntegrationTest {
     void testRecommendSlotsWithBusyUsers() {
         // Create group event
         GroupEventDto createdEvent = webTestClient.post()
-                .uri("/api/v1/groupEvent")
+                .uri("/api/v1/group-event")
                 .bodyValue(createRequest)
                 .exchange()
                 .expectStatus().isCreated()
@@ -282,7 +282,7 @@ class GroupEventServiceIntegrationTest {
         );
 
         webTestClient.post()
-                .uri("/api/v1/groupEvent/recommend")
+                .uri("/api/v1/group-event/recommend")
                 .bodyValue(recommendRequest)
                 .exchange()
                 .expectStatus().isOk();
